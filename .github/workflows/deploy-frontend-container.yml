@@ -197,15 +197,31 @@ jobs:
           echo '✅ Container is running and healthy!'
         "
 
+    - name: Ensure nginx is installed and configured
+      run: |
+        echo "🐳 Ensuring nginx is installed on server..."
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+          if ! command -v nginx &> /dev/null; then
+            echo '⚠️  Nginx not found, installing...'
+            sudo apt-get update &&
+            sudo apt-get install -y nginx &&
+            sudo systemctl enable nginx &&
+            sudo systemctl start nginx &&
+            echo '✅ Nginx installed successfully'
+          else
+            echo '✅ Nginx is already installed'
+            nginx -V
+          fi &&
+          
+          echo 'Creating nginx directories...' &&
+          sudo mkdir -p ${{ env.NGINX_SITES_AVAILABLE }} &&
+          sudo mkdir -p /etc/nginx/sites-enabled &&
+          echo '✅ Nginx directories created'
+        "
+    
     - name: Deploy nginx configurations to server
       run: |
         echo "🔧 Deploying optimized nginx configurations to server..."
-        
-        # Create nginx directories if they don't exist
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
-          sudo mkdir -p ${{ env.NGINX_SITES_AVAILABLE }} &&
-          sudo mkdir -p /etc/nginx/sites-enabled
-        "
         
         # Upload site-specific configuration
         scp nginx-configs/agamvani-domain ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/agamvani-platform-nginx
@@ -217,11 +233,8 @@ jobs:
         echo "Uploading optimized main nginx configuration..."
         scp nginx-configs/nginx.conf ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/nginx-main.conf
         
-        # Backup and update main nginx.conf
+        # Install main nginx.conf
         ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
-          echo 'Creating backup of existing nginx.conf...' &&
-          sudo cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.backup.\$(date +%Y%m%d_%H%M%S) &&
-          
           echo 'Installing optimized nginx.conf...' &&
           sudo mv /tmp/nginx-main.conf /etc/nginx/nginx.conf &&
           
