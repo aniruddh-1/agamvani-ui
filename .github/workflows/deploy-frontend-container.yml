@@ -219,6 +219,34 @@ jobs:
           echo '✅ Nginx directories created'
         "
     
+    - name: Install SSL certificates with certbot
+      run: |
+        echo "🔒 Installing SSL certificates..."
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+          if [ ! -f /etc/letsencrypt/live/av.ramsabha.in/fullchain.pem ]; then
+            echo '📦 Installing certbot...'
+            sudo apt-get update &&
+            sudo apt-get install -y certbot python3-certbot-nginx &&
+            
+            echo '🔐 Obtaining SSL certificate for av.ramsabha.in...'
+            sudo certbot certonly --nginx --non-interactive --agree-tos \\
+              --email ${{ secrets.SSL_EMAIL }} \\
+              -d av.ramsabha.in &&
+            
+            echo '♻️ Configuring auto-renewal (certs expire in 90 days)...'
+            sudo systemctl enable certbot.timer &&
+            sudo systemctl start certbot.timer &&
+            echo 'Testing auto-renewal configuration...'
+            sudo certbot renew --dry-run &&
+            
+            echo '✅ SSL certificates installed successfully'
+            echo '📅 Auto-renewal enabled: certbot will check twice daily and renew 30 days before expiry'
+          else
+            echo '✅ SSL certificates already exist'
+            sudo certbot certificates
+          fi
+        "
+    
     - name: Deploy nginx configurations to server
       run: |
         echo "🔧 Deploying optimized nginx configurations to server..."
