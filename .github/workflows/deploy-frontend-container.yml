@@ -201,8 +201,17 @@ jobs:
       run: |
         echo "🔧 Deploying optimized nginx configurations to server..."
         
+        # Create nginx directories if they don't exist
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+          sudo mkdir -p ${{ env.NGINX_SITES_AVAILABLE }} &&
+          sudo mkdir -p /etc/nginx/sites-enabled
+        "
+        
         # Upload site-specific configuration
-        scp nginx-configs/agamvani-domain ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ env.NGINX_SITES_AVAILABLE }}/${{ env.SITE_NAME }}
+        scp nginx-configs/agamvani-domain ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/agamvani-platform-nginx
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+          sudo mv /tmp/agamvani-platform-nginx ${{ env.NGINX_SITES_AVAILABLE }}/${{ env.SITE_NAME }}
+        "
         
         # Upload main nginx.conf if it doesn't exist or is different
         echo "Uploading optimized main nginx configuration..."
@@ -211,10 +220,10 @@ jobs:
         # Backup and update main nginx.conf
         ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
           echo 'Creating backup of existing nginx.conf...' &&
-          cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.backup.\$(date +%Y%m%d_%H%M%S) &&
+          sudo cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.backup.\$(date +%Y%m%d_%H%M%S) &&
           
           echo 'Installing optimized nginx.conf...' &&
-          mv /tmp/nginx-main.conf /etc/nginx/nginx.conf &&
+          sudo mv /tmp/nginx-main.conf /etc/nginx/nginx.conf &&
           
           echo '✅ Nginx configurations updated successfully'
         "
@@ -224,7 +233,7 @@ jobs:
         echo "🔗 Enabling nginx site configuration..."
         ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
           echo '🔗 Creating symbolic link to enable site...' &&
-          ln -sf ${{ env.NGINX_SITES_AVAILABLE }}/${{ env.SITE_NAME }} /etc/nginx/sites-enabled/${{ env.SITE_NAME }} &&
+          sudo ln -sf ${{ env.NGINX_SITES_AVAILABLE }}/${{ env.SITE_NAME }} /etc/nginx/sites-enabled/${{ env.SITE_NAME }} &&
           echo '✅ Site configuration enabled successfully'
         "
 
@@ -233,13 +242,13 @@ jobs:
         echo "♻️ Testing and reloading nginx..."
         ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
           echo '🔧 Testing nginx configuration...' &&
-          nginx -t &&
+          sudo nginx -t &&
           
           echo '♻️ Reloading nginx...' &&
-          systemctl reload nginx &&
+          sudo systemctl reload nginx &&
           
           echo '🔍 Checking nginx status...' &&
-          systemctl status nginx --no-pager &&
+          sudo systemctl status nginx --no-pager &&
           
           echo '🌐 Testing nginx proxy to container...' &&
           HTTP_CODE=\$(curl -s -o /dev/null -w '%{http_code}' http://localhost/health || echo '000') &&
