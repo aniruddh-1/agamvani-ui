@@ -226,21 +226,34 @@ jobs:
           if [ ! -f /etc/letsencrypt/live/av.ramsabha.in/fullchain.pem ]; then
             echo '📦 Installing certbot...'
             sudo apt-get update &&
-            sudo apt-get install -y certbot python3-certbot-nginx &&
+            sudo apt-get install -y certbot &&
             
-            echo '🔐 Obtaining SSL certificate for av.ramsabha.in...'
-            sudo certbot certonly --nginx --non-interactive --agree-tos \\
+            echo '🔐 Obtaining SSL certificate for av.ramsabha.in using standalone mode...'
+            echo '⚠️  Temporarily stopping nginx to allow certbot to bind to port 80...'
+            sudo systemctl stop nginx || true &&
+            
+            sudo certbot certonly --standalone --non-interactive --agree-tos \\
               --email ${{ secrets.SSL_EMAIL }} \\
+              --preferred-challenges http \\
               -d av.ramsabha.in &&
             
             echo '♻️ Configuring auto-renewal (certs expire in 90 days)...'
+            echo 'Setting up renewal hooks to safely stop/start nginx during renewal...'
+            sudo mkdir -p /etc/letsencrypt/renewal-hooks/pre /etc/letsencrypt/renewal-hooks/post &&
+            echo '#!/bin/bash' | sudo tee /etc/letsencrypt/renewal-hooks/pre/stop-nginx.sh > /dev/null &&
+            echo 'systemctl stop nginx' | sudo tee -a /etc/letsencrypt/renewal-hooks/pre/stop-nginx.sh > /dev/null &&
+            echo '#!/bin/bash' | sudo tee /etc/letsencrypt/renewal-hooks/post/start-nginx.sh > /dev/null &&
+            echo 'systemctl start nginx' | sudo tee -a /etc/letsencrypt/renewal-hooks/post/start-nginx.sh > /dev/null &&
+            sudo chmod +x /etc/letsencrypt/renewal-hooks/pre/stop-nginx.sh &&
+            sudo chmod +x /etc/letsencrypt/renewal-hooks/post/start-nginx.sh &&
             sudo systemctl enable certbot.timer &&
             sudo systemctl start certbot.timer &&
-            echo 'Testing auto-renewal configuration...'
-            sudo certbot renew --dry-run &&
             
             echo '✅ SSL certificates installed successfully'
             echo '📅 Auto-renewal enabled: certbot will check twice daily and renew 30 days before expiry'
+            echo '♻️ Renewal hooks configured: nginx will stop/start automatically during renewal'
+            echo '🔍 Certificate details:'
+            sudo certbot certificates
           else
             echo '✅ SSL certificates already exist'
             sudo certbot certificates
@@ -285,7 +298,10 @@ jobs:
           echo '🔧 Testing nginx configuration...' &&
           sudo nginx -t &&
           
-          echo '♻️ Reloading nginx...' &&
+          echo '🚀 Starting nginx...' &&
+          sudo systemctl start nginx &&
+          
+          echo '♻️ Reloading nginx to apply latest config...' &&
           sudo systemctl reload nginx &&
           
           echo '🔍 Checking nginx status...' &&
