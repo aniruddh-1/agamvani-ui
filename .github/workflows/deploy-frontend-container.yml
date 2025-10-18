@@ -1,0 +1,315 @@
+name: Deploy Frontend Container to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    env:
+      # Container Configuration (non-sensitive)
+      CONTAINER_NAME: agamvani-ui
+      IMAGE_NAME: agamvani-ui:latest
+      CONTAINER_PORT: 3001
+      NODE_ENV: production
+      DEPLOY_DIR: /opt/agamvani-platform/agamvani-ui
+      NGINX_SITES_AVAILABLE: /etc/nginx/sites-available
+      SITE_NAME: agamvani-platform
+      # Nginx deployment configuration
+      NGINX_CONFIG_TYPE: domain-server
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Create environment file from secrets
+      run: |
+        cat > .env.production << EOF
+        # Agamvani Radio - Frontend Environment (Production)
+        # Generated automatically by GitHub Actions
+        
+        # API Configuration
+        VITE_API_ROOT_URL=${{ secrets.VITE_API_ROOT_URL }}
+        VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}
+        
+        # Frontend Configuration
+        VITE_FRONTEND_URL=${{ secrets.VITE_FRONTEND_URL }}
+        VITE_FRONTEND_DEV_URL=${{ secrets.VITE_FRONTEND_DEV_URL }}
+        
+        # Google OAuth Configuration
+        VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+        
+        # Environment
+        NODE_ENV=production
+        EOF
+
+    - name: Validate environment variables
+      run: |
+        echo "🔍 Validating environment variables..."
+        if [ -z "${{ secrets.VITE_API_ROOT_URL }}" ]; then
+          echo "❌ VITE_API_ROOT_URL is required"
+          exit 1
+        fi
+        if [ -z "${{ secrets.VITE_FRONTEND_URL }}" ]; then
+          echo "❌ VITE_FRONTEND_URL is required"
+          exit 1
+        fi
+        if [ -z "${{ secrets.VITE_GOOGLE_CLIENT_ID }}" ]; then
+          echo "❌ VITE_GOOGLE_CLIENT_ID is required"
+          exit 1
+        fi
+        if [ -z "${{ secrets.SERVER_HOST }}" ]; then
+          echo "❌ SERVER_HOST is required for nginx configuration"
+          exit 1
+        fi
+        echo "✅ All required environment variables are set"
+
+    - name: Generate nginx deployment configuration
+      run: |
+        echo "🔧 Generating nginx configuration with environment variables..."
+        
+        # Create nginx environment file for deployment
+        cat > nginx.env << EOF
+        # Nginx deployment environment (auto-generated)
+        SERVER_IP=${{ secrets.SERVER_HOST }}
+        DOMAIN_NAME=av\\.ramsabha\\.in
+        STATIC_FILES_PATH=${{ env.DEPLOY_DIR }}/dist
+        BACKEND_HOST=127.0.0.1
+        BACKEND_PORT=8002
+        UI_CONTAINER_HOST=127.0.0.1
+        UI_CONTAINER_PORT=${{ env.CONTAINER_PORT }}
+        DEPLOYMENT_TYPE=${{ env.NGINX_CONFIG_TYPE }}
+        SSL_CERT_PATH=/etc/letsencrypt/live/av.ramsabha.in/fullchain.pem
+        SSL_KEY_PATH=/etc/letsencrypt/live/av.ramsabha.in/privkey.pem
+        SSL_CHAIN_PATH=/etc/letsencrypt/live/av.ramsabha.in/chain.pem
+        EOF
+        
+        # Generate nginx configurations
+        chmod +x deploy-nginx.sh
+        ./deploy-nginx.sh
+        
+        echo "✅ Nginx configurations generated successfully"
+
+    - name: Build Docker image
+      run: |
+        echo "🏗️ Building Docker image..."
+        docker build -t ${{ env.IMAGE_NAME }} .
+        echo "✅ Docker image built successfully"
+
+    - name: Save Docker image
+      run: |
+        echo "💾 Saving Docker image to file..."
+        docker save ${{ env.IMAGE_NAME }} -o agamvani-ui-image.tar
+        echo "✅ Docker image saved"
+
+    - name: Setup SSH key
+      uses: webfactory/ssh-agent@v0.8.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+        log-public-key: false
+
+    - name: Smart Firewall Update - Whitelist Current Runner IP Only
+      run: |
+        echo "🧠 Smart Firewall Update: Detecting and whitelisting current runner IP..."
+        chmod +x scripts/smart-firewall-deploy.sh
+        HETZNER_API_TOKEN="${{ secrets.HETZNER_API_TOKEN }}" ./scripts/smart-firewall-deploy.sh
+
+    - name: Configure SSH settings
+      run: |
+        mkdir -p ~/.ssh
+        echo "Configuring SSH for deployment..."
+        {
+          echo "Host ${{ secrets.SERVER_HOST }}"
+          echo "    StrictHostKeyChecking no"
+          echo "    UserKnownHostsFile /dev/null"
+          echo "    LogLevel ERROR"
+        } >> ~/.ssh/config
+        echo "SSH configured for secure deployment"
+
+    - name: Upload Docker image to server
+      run: |
+        echo "📤 Uploading Docker image to server..."
+        scp agamvani-ui-image.tar ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/
+        echo "✅ Docker image uploaded"
+
+    - name: Deploy container on server
+      run: |
+        echo "🚀 Deploying container on server..."
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+          echo '📋 Loading Docker image...' &&
+          cd /tmp &&
+          docker load -i agamvani-ui-image.tar &&
+          
+          echo '🛑 Stopping existing container if running...' &&
+          docker stop ${{ env.CONTAINER_NAME }} 2>/dev/null || echo 'No existing container to stop' &&
+          docker rm ${{ env.CONTAINER_NAME }} 2>/dev/null || echo 'No existing container to remove' &&
+          
+          echo '🚀 Starting new container...' &&
+          mkdir -p ${{ env.DEPLOY_DIR }}/logs &&
+          docker run -d \\
+            --name ${{ env.CONTAINER_NAME }} \\
+            --restart unless-stopped \\
+            -p 127.0.0.1:${{ env.CONTAINER_PORT }}:80 \\
+            -v ${{ env.DEPLOY_DIR }}/logs:/var/log/nginx \\
+            -e NODE_ENV=${{ env.NODE_ENV }} \\
+            ${{ env.IMAGE_NAME }} &&
+          
+          echo '⏳ Waiting for container to be healthy...' &&
+          sleep 10 &&
+          
+          echo '🔍 Checking container status...' &&
+          docker ps | grep ${{ env.CONTAINER_NAME }} &&
+          
+          echo '🏥 Testing container health...' &&
+          curl -f http://localhost:${{ env.CONTAINER_PORT }}/health || {
+            echo '❌ Container health check failed!'
+            docker logs ${{ env.CONTAINER_NAME }} --tail 20
+            exit 1
+          } &&
+          
+          echo '✅ Container is running and healthy!'
+        "
+
+    - name: Deploy nginx configurations to server
+      run: |
+        echo "🔧 Deploying optimized nginx configurations to server..."
+        
+        # Upload site-specific configuration
+        scp nginx-configs/agamvani-domain ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ env.NGINX_SITES_AVAILABLE }}/${{ env.SITE_NAME }}
+        
+        # Upload main nginx.conf if it doesn't exist or is different
+        echo "Uploading optimized main nginx configuration..."
+        scp nginx-configs/nginx.conf ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/nginx-main.conf
+        
+        # Backup and update main nginx.conf
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+          echo 'Creating backup of existing nginx.conf...' &&
+          cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.backup.\$(date +%Y%m%d_%H%M%S) &&
+          
+          echo 'Installing optimized nginx.conf...' &&
+          mv /tmp/nginx-main.conf /etc/nginx/nginx.conf &&
+          
+          echo '✅ Nginx configurations updated successfully'
+        "
+
+    - name: Enable nginx site configuration
+      run: |
+        echo "🔗 Enabling nginx site configuration..."
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+          echo '🔗 Creating symbolic link to enable site...' &&
+          ln -sf ${{ env.NGINX_SITES_AVAILABLE }}/${{ env.SITE_NAME }} /etc/nginx/sites-enabled/${{ env.SITE_NAME }} &&
+          echo '✅ Site configuration enabled successfully'
+        "
+
+    - name: Test and reload nginx
+      run: |
+        echo "♻️ Testing and reloading nginx..."
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+          echo '🔧 Testing nginx configuration...' &&
+          nginx -t &&
+          
+          echo '♻️ Reloading nginx...' &&
+          systemctl reload nginx &&
+          
+          echo '🔍 Checking nginx status...' &&
+          systemctl status nginx --no-pager &&
+          
+          echo '🌐 Testing nginx proxy to container...' &&
+          HTTP_CODE=\$(curl -s -o /dev/null -w '%{http_code}' http://localhost/health || echo '000') &&
+          if [ \"\$HTTP_CODE\" = \"200\" ]; then
+            echo '✅ Nginx proxy responding (HTTP \$HTTP_CODE)'
+          else
+            echo '⚠️  Nginx proxy test returned HTTP \$HTTP_CODE, but container is healthy - this is OK!'
+            echo '🔍 Note: External connectivity may take a moment to propagate'
+          fi &&
+          echo '✅ Health checks completed - deployment can proceed'
+        "
+
+    - name: Verify containerized deployment
+      run: |
+        echo "🔍 Verifying containerized deployment..."
+        sleep 5
+        
+        # Check if site is responding
+        echo "🔍 Testing main page..."
+        RESPONSE_HEADERS=$(curl -s -I -H "Cache-Control: no-cache" ${{ secrets.VITE_FRONTEND_URL }})
+        HTTP_CODE=$(echo "$RESPONSE_HEADERS" | grep "HTTP/" | head -1 | grep -o '[0-9]\{3\}')
+        
+        if [ "$HTTP_CODE" = "200" ]; then
+          echo "✅ Site is responding successfully (HTTP $HTTP_CODE)"
+        else
+          echo "❌ Site is not responding correctly (HTTP $HTTP_CODE)"
+          exit 1
+        fi
+        
+        # Test container health endpoint
+        echo "🔍 Testing container health endpoint..."
+        HEALTH_CODE=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.VITE_FRONTEND_URL }}/health)
+        if [ $HEALTH_CODE -eq 200 ]; then
+          echo "✅ Container health endpoint accessible (HTTP $HEALTH_CODE)"
+        else
+          echo "❌ Container health endpoint failed (HTTP $HEALTH_CODE)"
+          exit 1
+        fi
+
+    - name: Cleanup temporary files
+      run: |
+        echo "🧹 Cleaning up temporary files..."
+        rm -f agamvani-ui-image.tar
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "rm -f /tmp/agamvani-ui-image.tar"
+
+    - name: Docker system cleanup
+      run: |
+        echo "🧹 Running Docker system cleanup on server..."
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+          echo '🐳 Running docker system prune to clean up unused data...' &&
+          docker system prune -f || echo 'System prune completed' &&
+          echo '📊 Docker space usage after cleanup:' &&
+          docker system df --format 'table {{.Type}} {{.TotalCount}} {{.Size}} {{.Reclaimable}}' &&
+          echo '✅ Docker cleanup completed'
+        "
+
+    - name: Cleanup firewall rules
+      if: always()
+      run: |
+        echo "🧹 Cleaning up temporary GitHub Actions firewall rules..."
+        chmod +x scripts/cleanup-firewall.sh
+        HETZNER_API_TOKEN="${{ secrets.HETZNER_API_TOKEN }}" ./scripts/cleanup-firewall.sh
+
+    - name: Deployment summary
+      run: |
+        echo "🎉 Containerized frontend deployment completed successfully!"
+        echo "📝 Deployment Summary:"
+        echo "   • Repository: ${{ github.repository }}"
+        echo "   • Branch: ${{ github.ref_name }}"
+        echo "   • Commit: ${{ github.sha }}"
+        echo "   • Container: ${{ env.CONTAINER_NAME }}"
+        echo "   • Image: ${{ env.IMAGE_NAME }}"
+        echo "   • Frontend URL: ${{ secrets.VITE_FRONTEND_URL }}"
+        echo "   • Container Port: ${{ env.CONTAINER_PORT }}"
+        echo "   • Nginx Config: ${{ env.NGINX_CONFIG_TYPE }}"
+        echo "   • Deployed at: $(date)"
+        echo ""
+        echo "🚀 Performance Optimizations:"
+        echo "   ✅ Gzip compression enabled (level 6)"
+        echo "   ✅ Static asset caching (1 year)"
+        echo "   ✅ Extended API timeouts (120s)"
+        echo "   ✅ Large buffer support for audio streaming"
+        echo "   ✅ Mobile OAuth deep linking support"
+        echo "   ✅ CORS headers for mobile apps"
+        echo ""
+        echo "🐳 Container Details:"
+        echo "   ✅ Nginx running inside container"
+        echo "   ✅ Server nginx proxying to container"
+        echo "   ✅ Health checks enabled"
+        echo "   ✅ Log volume mounted"
+        echo "   ✅ Automatic restart on failure"

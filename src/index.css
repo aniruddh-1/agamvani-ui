@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: hsl(0 0% 100%);
+  --color-foreground: hsl(222.2 84% 4.9%);
+  --color-card: hsl(0 0% 100%);
+  --color-card-foreground: hsl(222.2 84% 4.9%);
+  --color-popover: hsl(0 0% 100%);
+  --color-popover-foreground: hsl(222.2 84% 4.9%);
+  --color-primary: hsl(21 100% 58%);
+  --color-primary-foreground: hsl(210 40% 98%);
+  --color-secondary: hsl(210 40% 96%);
+  --color-secondary-foreground: hsl(222.2 84% 4.9%);
+  --color-muted: hsl(210 40% 96%);
+  --color-muted-foreground: hsl(215.4 16.3% 46.9%);
+  --color-accent: hsl(45 93% 47%);
+  --color-accent-foreground: hsl(222.2 84% 4.9%);
+  --color-destructive: hsl(0 84.2% 60.2%);
+  --color-destructive-foreground: hsl(210 40% 98%);
+  --color-border: hsl(214.3 31.8% 91.4%);
+  --color-input: hsl(214.3 31.8% 91.4%);
+  --color-ring: hsl(21 100% 58%);
+  --radius: 0.5rem;
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: Inter, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+.spiritual-card {
+  background-color: var(--color-card);
+  color: var(--color-card-foreground);
+  border-radius: 0.5rem;
+  border-width: 1px;
+  box-shadow: 0 10px 40px rgba(255, 153, 51, 0.1);
+  backdrop-filter: blur(4px);
+}
+
+.meditation-btn {
+  background: linear-gradient(135deg, #FF9933 0%, #F59E0B 100%);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 9999px;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.meditation-btn:hover {
+  box-shadow: 0 20px 60px rgba(255, 153, 51, 0.15);
+  transform: scale(1.05);
+}
+
+.meditation-btn:active {
+  transform: scale(0.95);
+}
+
+.meditation-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(255, 153, 51, 0.2);
+}
+
+.glass-panel {
+  background: rgba(255, 153, 51, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 153, 51, 0.2);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
