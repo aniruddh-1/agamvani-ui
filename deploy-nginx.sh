@@ -42,10 +42,10 @@ mkdir -p nginx-configs
 echo "Generating nginx configurations with environment variables..."
 
 # Generate IP-based server config
-substitute_vars "nginx-ip-server.conf" "nginx-configs/ramsabha-ip"
+substitute_vars "nginx-ip-server.conf" "nginx-configs/agamvani-ip"
 
 # Generate domain-based server config
-substitute_vars "nginx-server.conf" "nginx-configs/ramsabha-domain"
+substitute_vars "nginx-server.conf" "nginx-configs/agamvani-domain"
 
 # Generate main nginx config
 substitute_vars "nginx-main.conf" "nginx-configs/nginx.conf"
@@ -56,7 +56,7 @@ cp "nginx-container.conf" "nginx-configs/nginx-container.conf"
 echo "Generated nginx configurations in nginx-configs/ directory"
 echo ""
 echo "To deploy to server:"
-echo "  scp -i ~/.ssh/your_key nginx-configs/ramsabha-ip root@\$SERVER_IP:/etc/nginx/sites-available/"
+echo "  scp -i ~/.ssh/your_key nginx-configs/agamvani-ip root@\$SERVER_IP:/etc/nginx/sites-available/"
 echo "  scp -i ~/.ssh/your_key nginx-configs/nginx.conf root@\$SERVER_IP:/etc/nginx/"
 echo "  ssh -i ~/.ssh/your_key root@\$SERVER_IP 'nginx -t && systemctl reload nginx'"
 echo ""
