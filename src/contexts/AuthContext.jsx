@@ -18,21 +18,11 @@ export const AuthProvider = ({ children }) => {
 
   const fetchUser = async () => {
     try {
-      console.log('🔵 [AuthContext] Fetching user data...')
       const userData = await authAPI.getCurrentUser()
-      console.log('✅ [AuthContext] User data fetched:', {
-        email: userData.email,
-        profile_completed: userData.profile_completed,
-        is_admin: userData.is_admin,
-        is_verified: userData.is_verified,
-        verification_status: userData.verification_status,
-        approval_method: userData.approval_method
-      })
       setUser(userData)
       setIsAuthenticated(true)
       return userData
     } catch (error) {
-      console.error('❌ [AuthContext] Failed to fetch user:', error)
       setUser(null)
       setIsAuthenticated(false)
       throw error
@@ -40,7 +30,6 @@ export const AuthProvider = ({ children }) => {
   }
 
   const refreshUser = async () => {
-    console.log('🔵 [AuthContext] Refreshing user data...')
     return await fetchUser()
   }
 
