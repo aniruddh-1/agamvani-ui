@@ -81,8 +81,9 @@ const PublicRoute = ({ children, allowWhenIncomplete = false }) => {
     return <LoadingSpinner />
   }
   
-  if (isAuthenticated) {
-    if (user && user.profile_completed) {
+  // Only redirect if user is actually authenticated
+  if (isAuthenticated && user) {
+    if (user.profile_completed) {
       if (user.is_admin) {
         return <Navigate to="/" replace />
       }
@@ -102,7 +103,7 @@ const PublicRoute = ({ children, allowWhenIncomplete = false }) => {
       }
     }
     
-    if (user && !user.profile_completed && !allowWhenIncomplete) {
+    if (!user.profile_completed && !allowWhenIncomplete) {
       return <Navigate to="/complete-profile" replace />
     }
   }
