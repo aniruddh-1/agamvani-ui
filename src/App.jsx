@@ -34,42 +34,66 @@ const LoadingSpinner = ({ message = 'Loading...' }) => (
 const ProtectedRoute = ({ children, skipProfileCheck = false, skipVerificationCheck = false }) => {
   const { isAuthenticated, isLoading, user } = useAuth()
   
+  console.log('🔵 [ProtectedRoute] Checking access...', {
+    isAuthenticated,
+    isLoading,
+    user: user?.email,
+    profile_completed: user?.profile_completed,
+    skipProfileCheck,
+    skipVerificationCheck
+  })
+  
   if (isLoading) {
+    console.log('⏳ [ProtectedRoute] Still loading...')
     return <LoadingSpinner message="Authenticating..." />
   }
   
   if (!isAuthenticated) {
+    console.log('❌ [ProtectedRoute] Not authenticated, redirecting to /login')
     return <Navigate to="/login" replace />
   }
   
   // Check if profile completion is required
   if (!skipProfileCheck && user && !user.profile_completed) {
+    console.log('⚠️ [ProtectedRoute] Profile incomplete, redirecting to /complete-profile')
     return <Navigate to="/complete-profile" replace />
   }
   
   // Check verification status (only after profile is completed)
   if (!skipVerificationCheck && user && user.profile_completed) {
+    console.log('🔵 [ProtectedRoute] Checking verification status...', {
+      is_admin: user.is_admin,
+      is_verified: user.is_verified,
+      approval_method: user.approval_method,
+      verification_status: user.verification_status
+    })
+    
     // Admins are automatically approved once profile is completed
     if (user.is_admin) {
+      console.log('✅ [ProtectedRoute] Admin user - granting access')
       return <>{children}</>
     }
     
     // Users with invitation approval method
     if (user.approval_method === 'invitation') {
+      console.log('✅ [ProtectedRoute] Invitation user - granting access')
       return <>{children}</>
     }
     
     // Users that are already verified
     if (user.is_verified) {
+      console.log('✅ [ProtectedRoute] Verified user - granting access')
       return <>{children}</>
     }
     
     // Regular users need approval
     if (user.verification_status !== 'approved') {
+      console.log('⚠️ [ProtectedRoute] User needs approval, redirecting to /pending-verification')
       return <Navigate to="/pending-verification" replace />
     }
   }
   
+  console.log('✅ [ProtectedRoute] Access granted')
   return <>{children}</>
 }
 
@@ -77,12 +101,22 @@ const ProtectedRoute = ({ children, skipProfileCheck = false, skipVerificationCh
 const PublicRoute = ({ children, allowWhenIncomplete = false }) => {
   const { isAuthenticated, isLoading, user } = useAuth()
   
+  console.log('🔵 [PublicRoute] Checking access...', {
+    isAuthenticated,
+    isLoading,
+    user: user?.email,
+    profile_completed: user?.profile_completed,
+    allowWhenIncomplete
+  })
+  
   if (isLoading) {
+    console.log('⏳ [PublicRoute] Still loading...')
     return <LoadingSpinner />
   }
   
   // Only redirect if user is actually authenticated
   if (isAuthenticated && user) {
+    console.log('🔵 [PublicRoute] User is authenticated, checking redirect logic...')
     if (user.profile_completed) {
       if (user.is_admin) {
         return <Navigate to="/" replace />
