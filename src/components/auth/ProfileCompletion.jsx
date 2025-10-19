@@ -133,11 +133,16 @@ const ProfileCompletion = () => {
     setError('')
     setProcessingStep('Preparing profile data...')
 
+    console.log('🔵 [ProfileCompletion] Starting profile submission...')
+    console.log('🔵 [ProfileCompletion] Current user state:', user)
+    console.log('🔵 [ProfileCompletion] Form data:', formData)
+
     try {
       // Validate age if date of birth is provided
       if (formData.date_of_birth) {
         const ageValidation = validateAge(formData.date_of_birth)
         if (!ageValidation.isValid) {
+          console.log('❌ [ProfileCompletion] Age validation failed:', ageValidation.message)
           setError(ageValidation.message)
           setLoading(false)
           setProcessingStep('')
@@ -152,19 +157,32 @@ const ProfileCompletion = () => {
         gender: formData.gender || null
       }
       
+      console.log('🔵 [ProfileCompletion] Profile data to submit:', profileData)
       setProcessingStep('Updating your profile...')
       
       // Use the existing profile completion endpoint
       const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8002'
+      console.log('🔵 [ProfileCompletion] API URL:', apiUrl)
+      console.log('🔵 [ProfileCompletion] Submitting to:', `${apiUrl}/auth/profile/complete`)
+      
       const response = await axios.post(
         `${apiUrl}/auth/profile/complete`,
         profileData,
         { withCredentials: true }
       )
       
+      console.log('✅ [ProfileCompletion] Profile update response:', response.data)
+      
       // Always refresh user data immediately after successful update
       setProcessingStep('Refreshing user data...')
+      console.log('🔵 [ProfileCompletion] Refreshing user data...')
       const latestUser = await refreshUser()
+      console.log('✅ [ProfileCompletion] Latest user data:', latestUser)
+      console.log('🔵 [ProfileCompletion] profile_completed:', latestUser?.profile_completed)
+      console.log('🔵 [ProfileCompletion] is_admin:', latestUser?.is_admin)
+      console.log('🔵 [ProfileCompletion] is_verified:', latestUser?.is_verified)
+      console.log('🔵 [ProfileCompletion] verification_status:', latestUser?.verification_status)
+      console.log('🔵 [ProfileCompletion] approval_method:', latestUser?.approval_method)
       
       // Wait 1 second to ensure database consistency before verification
       setProcessingStep('Verifying profile completion...')
@@ -176,23 +194,29 @@ const ProfileCompletion = () => {
       // Route based on user verification status and admin status
       if (latestUser.is_admin || latestUser.is_verified || latestUser.verification_status === 'approved' || latestUser.approval_method === 'invitation') {
         // Admin users, verified users, approved users, or invitation users: Direct access to app
+        console.log('✅ [ProfileCompletion] User has access - redirecting to dashboard')
         setProcessingStep('Welcome! Redirecting to your dashboard...')
         
         setTimeout(() => {
           try {
+            console.log('🔵 [ProfileCompletion] Navigating to /')
             navigate('/', { replace: true })
           } catch (navError) {
+            console.log('⚠️ [ProfileCompletion] Navigation failed, using window.location')
             window.location.href = '/'
           }
         }, 1000)
       } else {
         // Unverified self-registered users: Redirect to verification pending
+        console.log('⚠️ [ProfileCompletion] User needs verification - redirecting to pending-verification')
         setProcessingStep('Profile submitted! Redirecting to verification status...')
         
         setTimeout(() => {
           try {
+            console.log('🔵 [ProfileCompletion] Navigating to /pending-verification')
             navigate('/pending-verification', { replace: true })
           } catch (navError) {
+            console.log('⚠️ [ProfileCompletion] Navigation failed, using window.location')
             window.location.href = '/pending-verification'
           }
         }, 1000)
@@ -200,6 +224,10 @@ const ProfileCompletion = () => {
       
     } catch (err) {
       // Enhanced error handling with more specific messages
+      console.error('❌ [ProfileCompletion] Error submitting profile:', err)
+      console.error('❌ [ProfileCompletion] Error response:', err.response?.data)
+      console.error('❌ [ProfileCompletion] Error status:', err.response?.status)
+      
       let errorMessage = 'Failed to complete profile. Please try again.'
       
       if (err.code === 'NETWORK_ERROR' || !err.response) {
