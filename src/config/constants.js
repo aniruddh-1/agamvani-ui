@@ -58,11 +58,11 @@ export const STORAGE_KEYS = {
 
 // App Configuration
 export const APP_CONFIG = {
-  NAME: 'Agamvani Radio',
-  DESCRIPTION: 'Spiritual Content Radio Streaming Platform',
+  NAME: 'अगम वाणी',
+  DESCRIPTION: 'आदि सत्तगुरु, सर्व आत्माओं के सत्तगुरु, सर्व सृष्टि के सत्तगुरु, सत्तगुरु सुखरामजी महाराज की अणभै वाणी से उनके अनुयायियों द्वारा गायन किए गए पद को श्रवण करने हेतु प्लेटफार्म',
   VERSION: '1.0.0',
-  DEFAULT_LANGUAGE: 'en',
-  SUPPORTED_LANGUAGES: ['en', 'hi'],
+  DEFAULT_LANGUAGE: 'hi',
+  SUPPORTED_LANGUAGES: ['hi', 'en'],
   SUPPORTED_AUDIO_FORMATS: ['mp3', 'wav', 'm4a', 'aac'],
   MAX_UPLOAD_SIZE: 100 * 1024 * 1024, // 100MB
 };
