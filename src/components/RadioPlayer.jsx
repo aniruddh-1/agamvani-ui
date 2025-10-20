@@ -181,7 +181,7 @@ function RadioPlayer({ streamUrl }) {
 
         {/* Status */}
         <div className="text-center text-sm text-muted-foreground">
-          {isPlaying ? 'Streaming live audio' : 'Press play to start listening'}
+          {isPlaying ? 'स्ट्रीमिंग चल रही है' : 'सुनने के लिए स्पर्श कीजिए'}
         </div>
       </div>
 

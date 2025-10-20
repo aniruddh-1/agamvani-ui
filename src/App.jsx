@@ -317,10 +317,6 @@ const RadioPage = () => {
             <RadioPlayer streamUrl={liveStream.stream_url} />
           )}
         </div>
-
-        <footer className="text-center mt-8 text-sm text-muted-foreground">
-          <p>v{APP_CONFIG.VERSION} | Powered by HLS Streaming</p>
-        </footer>
       </div>
     </div>
   )

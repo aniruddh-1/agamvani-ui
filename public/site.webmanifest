@@ -1,7 +1,7 @@
 {
-  "name": "Agamvani Radio",
-  "short_name": "Agamvani",
-  "description": "Spiritual Content Radio Streaming Platform",
+  "name": "अगम वाणी",
+  "short_name": "अगम वाणी",
+  "description": "आदि सत्तगुरु, सर्व आत्माओं के सत्तगुरु, सर्व सृष्टि के सत्तगुरु, सत्तगुरु सुखरामजी महाराज की अणभै वाणी से उनके अनुयायियों द्वारा गायन किए गए पद को श्रवण करने हेतु प्लेटफार्म",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#667eea",
@@ -26,6 +26,6 @@
       "type": "image/png"
     }
   ],
-  "categories": ["music", "entertainment", "lifestyle"],
-  "lang": "en-US"
+  "categories": ["music", "entertainment", "lifestyle", "devotional"],
+  "lang": "hi-IN"
 }
