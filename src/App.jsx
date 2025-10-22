@@ -175,16 +175,15 @@ const RadioPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 flex items-center justify-center p-4">
-      <div className="max-w-3xl w-full">
-        {/* User Info Header with Profile Menu */}
-        <div className="flex justify-end mb-4 relative">
-          <div className="spiritual-card p-4 flex items-center gap-4">
-            <div className="text-sm">
-              <p className="font-medium text-foreground">{user?.email}</p>
-              <p className="text-xs text-muted-foreground">{user?.is_admin ? 'admin' : 'user'}</p>
-            </div>
-            <div className="relative profile-menu-container">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 p-6">
+      {/* User Info Header with Profile Menu - Top Right */}
+      <div className="absolute top-4 right-4 z-50">
+        <div className="spiritual-card p-4 flex items-center gap-4">
+          <div className="text-sm">
+            <p className="font-medium text-foreground">{user?.email}</p>
+            <p className="text-xs text-muted-foreground">{user?.is_admin ? 'admin' : 'user'}</p>
+          </div>
+          <div className="relative profile-menu-container">
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 className="flex items-center gap-2 px-3 py-2 text-sm bg-saffron-600/10 text-saffron-600 hover:bg-saffron-600/20 rounded-lg transition-colors"
@@ -267,55 +266,70 @@ const RadioPage = () => {
                   </div>
                 </div>
               )}
-            </div>
           </div>
         </div>
+      </div>
 
-        <header className="text-center mb-8">
-          <div className="flex justify-center mb-6">
-            <img 
-              src="/logo.png" 
-              alt="Agamvani Logo" 
-              className="w-28 h-28 object-contain filter drop-shadow-lg" 
-            />
+      {/* Admin Invite Button - Fixed Position */}
+      {user?.is_admin && <InviteButton />}
+
+      {/* Two Column Layout */}
+      <div className="max-w-7xl mx-auto pt-20">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+          {/* Left Column - Logo and Description */}
+          <div className="space-y-6">
+            <div className="spiritual-card p-8">
+              {/* Centered Logo */}
+              <div className="flex flex-col items-center mb-8">
+                <img 
+                  src="/logo.png" 
+                  alt="Agamvani Logo" 
+                  className="w-64 h-64 object-contain filter drop-shadow-lg mb-4"
+                />
+                <h1 className="text-4xl font-bold text-foreground">अगम वाणी</h1>
+              </div>
+              
+              {/* Description */}
+              <div className="space-y-6">
+                <p className="text-base text-foreground leading-relaxed text-center">
+                  आदि सत्तगुरु, सर्व आत्माओं के सत्तगुरु, सर्व सृष्टि के सत्तगुरु, सत्तगुरु सुखरामजी महाराज की अणभै वाणी से उनके अनुयायियों द्वारा गायन किए गए पद को श्रवण करने हेतु मंच
+                </p>
+              </div>
+            </div>
           </div>
-          <h1 className="text-4xl font-bold text-foreground mb-2">{APP_CONFIG.NAME}</h1>
-          <p className="text-lg text-muted-foreground">{APP_CONFIG.DESCRIPTION}</p>
-        </header>
-        
-        {/* Admin Invite Button - Fixed Position */}
-        {user?.is_admin && <InviteButton />}
 
-        <div className="spiritual-card p-8">
-          {loading && (
-            <div className="text-center py-8">
-              <div className="inline-block w-12 h-12 border-4 border-saffron-200 border-t-saffron-600 rounded-full animate-spin mb-4"></div>
-              <p className="text-muted-foreground">Loading radio stream...</p>
-            </div>
-          )}
-          
-          {error && (
-            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-4">
-              <p className="text-destructive text-sm mb-3">Error: {error}</p>
-              <button 
-                onClick={initializeRadio}
-                className="px-4 py-2 bg-saffron-600 text-white rounded-lg hover:bg-saffron-700 transition-colors font-medium"
-              >
-                Retry
-              </button>
-            </div>
-          )}
+          {/* Right Column - Radio Player */}
+          <div className="spiritual-card p-8">
+            {loading && (
+              <div className="text-center py-8">
+                <div className="inline-block w-12 h-12 border-4 border-saffron-200 border-t-saffron-600 rounded-full animate-spin mb-4"></div>
+                <p className="text-muted-foreground">Loading radio stream...</p>
+              </div>
+            )}
+            
+            {error && (
+              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-4">
+                <p className="text-destructive text-sm mb-3">Error: {error}</p>
+                <button 
+                  onClick={initializeRadio}
+                  className="px-4 py-2 bg-saffron-600 text-white rounded-lg hover:bg-saffron-700 transition-colors font-medium"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
 
-          {!loading && !error && !liveStream && (
-            <div className="text-center py-8 text-muted-foreground">
-              <p className="mb-2">No live stream available.</p>
-              <p className="text-sm">Upload an audio file to get started.</p>
-            </div>
-          )}
+            {!loading && !error && !liveStream && (
+              <div className="text-center py-8 text-muted-foreground">
+                <p className="mb-2">No live stream available.</p>
+                <p className="text-sm">Upload an audio file to get started.</p>
+              </div>
+            )}
 
-          {!loading && !error && liveStream && (
-            <RadioPlayer streamUrl={liveStream.stream_url} />
-          )}
+            {!loading && !error && liveStream && (
+              <RadioPlayer streamUrl={liveStream.stream_url} />
+            )}
+          </div>
         </div>
       </div>
     </div>
