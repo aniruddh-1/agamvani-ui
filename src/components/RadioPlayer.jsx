@@ -1,18 +1,116 @@
 import { useRef, useEffect, useState } from 'react'
 import ReactHlsPlayer from 'react-hls-player'
+import Hls from 'hls.js'
 import { API_BASE_URL } from '../config/constants'
 
 function RadioPlayer({ streamUrl }) {
   const playerRef = useRef(null)
+  const hlsRef = useRef(null)
+  const retryIntervalRef = useRef(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [volume, setVolume] = useState(1)
   const [currentTrack, setCurrentTrack] = useState(null)
   const [restartCount, setRestartCount] = useState(0)
+  const [isConnecting, setIsConnecting] = useState(false)
 
   // Construct full HLS URL
   const hlsUrl = streamUrl?.startsWith('http') 
     ? streamUrl 
     : `${API_BASE_URL}${streamUrl}`
+
+  // Initialize HLS with custom error recovery
+  useEffect(() => {
+    if (!playerRef.current || !Hls.isSupported()) return
+
+    const video = playerRef.current
+    const hls = new Hls({
+      enableWorker: true,
+      lowLatencyMode: true,
+      backBufferLength: 90,
+      manifestLoadingTimeOut: 10000,
+      manifestLoadingMaxRetry: Infinity, // Retry forever
+      manifestLoadingRetryDelay: 1000,
+      levelLoadingTimeOut: 10000,
+      levelLoadingMaxRetry: Infinity, // Retry forever
+      levelLoadingRetryDelay: 1000,
+      fragLoadingTimeOut: 20000,
+      fragLoadingMaxRetry: Infinity, // Retry forever
+      fragLoadingRetryDelay: 1000,
+    })
+
+    hlsRef.current = hls
+
+    // Error recovery handler
+    hls.on(Hls.Events.ERROR, (event, data) => {
+      if (data.fatal) {
+        switch(data.type) {
+          case Hls.ErrorTypes.NETWORK_ERROR:
+            console.log('Network error, attempting to recover...')
+            setIsConnecting(true)
+            // Start retry immediately
+            hls.startLoad()
+            break
+          case Hls.ErrorTypes.MEDIA_ERROR:
+            console.log('Media error, attempting to recover...')
+            hls.recoverMediaError()
+            break
+          default:
+            console.log('Fatal error, destroying and recreating...')
+            hls.destroy()
+            // Recreate after short delay
+            setTimeout(() => {
+              if (playerRef.current) {
+                const newHls = new Hls(hls.config)
+                hlsRef.current = newHls
+                newHls.loadSource(hlsUrl)
+                newHls.attachMedia(video)
+              }
+            }, 1000)
+            break
+        }
+      }
+    })
+
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      setIsConnecting(false)
+      console.log('HLS manifest loaded successfully')
+      if (isPlaying) {
+        video.play().catch(err => console.log('Auto-play prevented:', err))
+      }
+    })
+
+    hls.loadSource(hlsUrl)
+    hls.attachMedia(video)
+
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy()
+      }
+    }
+  }, [hlsUrl])
+
+  // Additional monitoring - check if playback stalled and resume if needed
+  useEffect(() => {
+    const monitorPlayback = () => {
+      if (hlsRef.current && hlsRef.current.media && isPlaying) {
+        const video = hlsRef.current.media
+        // If playing flag is set but video is paused, try to resume
+        if (video.paused && !video.ended) {
+          console.log('Detected paused state during playback, attempting resume')
+          video.play().catch(err => console.log('Resume error:', err))
+        }
+      }
+    }
+
+    // Check every 10 seconds (less frequent, less console noise)
+    retryIntervalRef.current = setInterval(monitorPlayback, 10000)
+
+    return () => {
+      if (retryIntervalRef.current) {
+        clearInterval(retryIntervalRef.current)
+      }
+    }
+  }, [isPlaying])
 
   // Fetch now-playing from server
   useEffect(() => {
@@ -181,7 +279,16 @@ function RadioPlayer({ streamUrl }) {
 
         {/* Status */}
         <div className="text-center text-sm text-muted-foreground">
-          {isPlaying ? 'स्ट्रीमिंग चल रही है' : 'सुनने के लिए स्पर्श कीजिए'}
+          {isConnecting && isPlaying ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="inline-block w-4 h-4 border-2 border-saffron-500 border-t-transparent rounded-full animate-spin"></span>
+              कनेक्ट हो रहा है...
+            </span>
+          ) : isPlaying ? (
+            'स्ट्रीमिंग चल रही है'
+          ) : (
+            'सुनने के लिए स्पर्श कीजिए'
+          )}
         </div>
       </div>
 
