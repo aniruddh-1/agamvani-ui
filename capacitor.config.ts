@@ -5,10 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Agam Vani',
   webDir: 'dist',
   server: {
-    androidScheme: 'https',
-    cleartext: true,
-    // Allow loading from localhost during development
-    hostname: 'agamvani.local'
+    androidScheme: 'https'
   },
   plugins: {
     SplashScreen: {
@@ -16,10 +13,16 @@ const config: CapacitorConfig = {
       backgroundColor: "#EA580C",
       androidScaleType: "CENTER_CROP",
       showSpinner: false
+    },
+    GoogleAuth: {
+      scopes: ['profile', 'email'],
+      serverClientId: '420256009464-7vmql14haba955lrp63klmqoidgkkckk.apps.googleusercontent.com',
+      androidClientId: '420256009464-pt7hding1jt80js6hseqmhfnekpok4di.apps.googleusercontent.com',
+      forceCodeForRefreshToken: true
     }
   },
   android: {
-    allowMixedContent: true,
+    allowMixedContent: false,
     captureInput: true,
     webContentsDebuggingEnabled: true
   }

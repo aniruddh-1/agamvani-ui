@@ -50,8 +50,18 @@ dist-ssr
 *.seed
 *.pid.lock
 
-# Capacitor (if using mobile builds)
-android/
+# Capacitor - Keep android folder but ignore build artifacts and secrets
+android/build/
+android/.gradle/
+android/.idea/
+android/local.properties
+android/key.properties
+android/*.jks
+android/*.keystore
+android/app/build/
+android/app/release/
+*.apk
+android/app/*.aab
 ios/
 
 # Debug

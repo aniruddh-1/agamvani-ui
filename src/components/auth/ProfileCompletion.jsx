@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useDropdownData } from '../../hooks/useDropdownData'
-import axios from 'axios'
+import { authAPI } from '../../lib/api'
 
 const ProfileCompletion = () => {
   const { user, refreshUser } = useAuth()
@@ -155,12 +155,7 @@ const ProfileCompletion = () => {
       setProcessingStep('Updating your profile...')
       
       // Use the existing profile completion endpoint
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8002'
-      const response = await axios.post(
-        `${apiUrl}/auth/profile/complete`,
-        profileData,
-        { withCredentials: true }
-      )
+      const response = await authAPI.completeProfile(profileData)
       
       // Always refresh user data immediately after successful update
       setProcessingStep('Refreshing user data...')

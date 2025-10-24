@@ -18,7 +18,11 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     // Cookies are automatically sent with withCredentials: true
-    // But we can add additional headers if needed
+    // But for mobile native auth, we also check localStorage for tokens
+    const accessToken = localStorage.getItem('access_token');
+    if (accessToken) {
+      config.headers.Authorization = `Bearer ${accessToken}`;
+    }
     return config;
   },
   (error) => Promise.reject(error)
@@ -146,6 +150,12 @@ export const authAPI = {
     const response = await apiClient.delete('/auth/me');
     return response.data;
   },
+
+  // Profile completion
+  completeProfile: async (profileData) => {
+    const response = await apiClient.post('/auth/profile/complete', profileData);
+    return response.data;
+  },
 };
 
 /**
@@ -199,6 +209,31 @@ export const radioAPI = {
 };
 
 /**
+ * Admin API
+ */
+export const adminAPI = {
+  getUsers: async () => {
+    const response = await apiClient.get('/admin/users');
+    return response.data;
+  },
+
+  updateUser: async (userId, updates) => {
+    const response = await apiClient.put(`/admin/users/${userId}`, updates);
+    return response.data;
+  },
+
+  approveUser: async (userId) => {
+    const response = await apiClient.post(`/admin/users/${userId}/approve`);
+    return response.data;
+  },
+
+  deleteUser: async (userId) => {
+    const response = await apiClient.delete(`/admin/users/${userId}`);
+    return response.data;
+  },
+};
+
+/**
  * Health Check API
  */
 export const healthAPI = {
@@ -212,5 +247,6 @@ export default {
   authAPI,
   userAPI,
   radioAPI,
+  adminAPI,
   healthAPI,
 };
