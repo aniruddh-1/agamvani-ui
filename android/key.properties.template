@@ -1,0 +1,11 @@
+# Android Signing Configuration for Agamvani
+# Copy this file to key.properties and fill in your values
+# NEVER commit key.properties to version control
+
+storePassword=YOUR_KEYSTORE_PASSWORD
+keyPassword=YOUR_KEY_PASSWORD
+keyAlias=agamvani
+storeFile=../release-keystore.jks
+
+# To generate a keystore, run:
+# keytool -genkey -v -keystore release-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias agamvani

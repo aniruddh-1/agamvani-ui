@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import RadioPlayer from './components/RadioPlayer'
 import { APP_CONFIG, API_ENDPOINTS } from './config/constants'
 import { useAuth } from './contexts/AuthContext'
+import { deepLinkService } from './services/deepLinkService'
 
 // Import auth components
 import LoginPage from './components/auth/LoginPage'
@@ -337,6 +338,48 @@ const RadioPage = () => {
 }
 
 function App() {
+  const navigate = useNavigate();
+  const [initialDeepLinkHandled, setInitialDeepLinkHandled] = useState(false);
+
+  // Set up deep link navigation handler - only once
+  useEffect(() => {
+    // Set navigation handler for deep links
+    deepLinkService.setNavigationHandler((path) => {
+      console.log('📱 Deep link navigation:', path);
+      navigate(path);
+    });
+  }, []); // No dependencies - run once
+
+  // Handle initial launch deep link - only once
+  useEffect(() => {
+    if (initialDeepLinkHandled) {
+      return;
+    }
+
+    const checkInitialDeepLink = async () => {
+      try {
+        const initialPath = await deepLinkService.handleInitialLaunch();
+        if (initialPath) {
+          console.log('📱 Initial deep link:', initialPath);
+          navigate(initialPath);
+        } else {
+          // Check for any stored pending path
+          const pendingPath = deepLinkService.getPendingPath();
+          if (pendingPath) {
+            console.log('📱 Pending deep link:', pendingPath);
+            navigate(pendingPath);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error handling initial deep link:', error);
+      } finally {
+        setInitialDeepLinkHandled(true);
+      }
+    };
+
+    checkInitialDeepLink();
+  }, [navigate, initialDeepLinkHandled]);
+
   return (
     <Routes>
       {/* Authentication Routes */}

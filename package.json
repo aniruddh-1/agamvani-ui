@@ -7,11 +7,22 @@
     "dev": "vite --port 3001",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0"
+    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+    "android:sync": "npx cap sync android",
+    "android:build": "npm run build && npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:run": "npm run android:build && npx cap run android",
+    "android:release": "cd android && ./gradlew assembleRelease",
+    "android:bundle": "cd android && ./gradlew bundleRelease"
   },
   "dependencies": {
-    "@capacitor/android": "^5.5.0",
-    "@capacitor/core": "^5.5.0",
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/app": "^7.1.0",
+    "@capacitor/browser": "^7.0.2",
+    "@capacitor/core": "^7.4.3",
+    "@capacitor/filesystem": "^7.1.4",
+    "@capacitor/share": "^7.0.2",
+    "@southdevs/capacitor-google-auth": "^7.0.0",
     "axios": "^1.12.2",
     "hls.js": "^1.6.13",
     "lucide-react": "^0.546.0",
@@ -22,7 +33,7 @@
     "react-router-dom": "^6.30.1"
   },
   "devDependencies": {
-    "@capacitor/cli": "^5.5.0",
+    "@capacitor/cli": "^7.4.3",
     "@tailwindcss/postcss": "^4.1.14",
     "@types/node": "^20.10.0",
     "@types/react": "^18.2.43",

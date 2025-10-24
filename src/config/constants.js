@@ -1,17 +1,48 @@
 // Environment-based configuration constants
 // All configuration is loaded from environment variables with sensible defaults
 
+// Detect if running on mobile (Android APK) or web
+const isMobileApp = () => {
+  // Check if running in Capacitor
+  return window.Capacitor !== undefined;
+};
+
 // API Configuration
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8002';
-export const API_ROOT_URL = import.meta.env.VITE_API_ROOT_URL || 'http://localhost:8002';
-export const STREAM_BASE_URL = import.meta.env.VITE_STREAM_URL || 'http://localhost:8002/radio/hls';
+// Use production URL for mobile apps, allow override via env vars
+const getAPIBaseURL = () => {
+  // First check environment variable
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+  // Use production URL for mobile apps
+  if (isMobileApp()) {
+    return 'https://av.ramsabha.in';
+  }
+  // Default to localhost for web development
+  return 'http://localhost:8002';
+};
+
+export const API_BASE_URL = getAPIBaseURL();
+export const API_ROOT_URL = API_BASE_URL;
+export const STREAM_BASE_URL = import.meta.env.VITE_STREAM_URL || `${API_BASE_URL}/radio/hls`;
 
 // Frontend Configuration
-export const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || 'http://localhost:3001';
+const getFrontendURL = () => {
+  if (import.meta.env.VITE_FRONTEND_URL) {
+    return import.meta.env.VITE_FRONTEND_URL;
+  }
+  if (isMobileApp()) {
+    return 'https://av.ramsabha.in';
+  }
+  return 'http://localhost:3001';
+};
+
+export const FRONTEND_URL = getFrontendURL();
 export const FRONTEND_PORT = import.meta.env.VITE_PORT || 3001;
 
 // Google OAuth Configuration
-export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '420256009464-7vmql14haba955lrp63klmqoidgkkckk.apps.googleusercontent.com';
+export const GOOGLE_ANDROID_CLIENT_ID = import.meta.env.VITE_GOOGLE_ANDROID_CLIENT_ID || '420256009464-pt7hding1jt80js6hseqmhfnekpok4di.apps.googleusercontent.com';
 export const GOOGLE_REDIRECT_URI = import.meta.env.VITE_GOOGLE_REDIRECT_URI || `${FRONTEND_URL}/auth/google/callback`;
 
 // Environment
@@ -101,6 +132,7 @@ export default {
   FRONTEND_URL,
   FRONTEND_PORT,
   GOOGLE_CLIENT_ID,
+  GOOGLE_ANDROID_CLIENT_ID,
   GOOGLE_REDIRECT_URI,
   NODE_ENV,
   IS_PRODUCTION,

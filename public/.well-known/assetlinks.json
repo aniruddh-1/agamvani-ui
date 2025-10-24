@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "in.ramsabha.agamvani",
+      "sha256_cert_fingerprints": [
+        "42:07:E4:BB:4D:C7:6C:2A:40:11:47:5A:A2:08:FA:62:61:62:CE:9D:A2:B7:31:F6:DC:D2:11:9A:DC:6C:6C:B4"
+      ]
+    }
+  }
+]

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import axios from 'axios'
+import { adminAPI } from '../../lib/api'
 
 const AdminPanel = () => {
   const navigate = useNavigate()
@@ -28,20 +28,16 @@ const AdminPanel = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true)
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8002'
       
-      const response = await axios.get(
-        `${apiUrl}/admin/users`,
-        { withCredentials: true }
-      )
+      const response = await adminAPI.getUsers()
       
-      setUsers(response.data.users || [])
+      setUsers(response.users || [])
       
       // Calculate stats
-      const totalUsers = response.data.users?.length || 0
-      const pendingVerification = response.data.users?.filter(u => u.verification_status === 'pending').length || 0
-      const admins = response.data.users?.filter(u => u.is_admin).length || 0
-      const verifiedUsers = response.data.users?.filter(u => u.is_verified).length || 0
+      const totalUsers = response.users?.length || 0
+      const pendingVerification = response.users?.filter(u => u.verification_status === 'pending').length || 0
+      const admins = response.users?.filter(u => u.is_admin).length || 0
+      const verifiedUsers = response.users?.filter(u => u.is_verified).length || 0
       
       setStats({
         total_users: totalUsers,
@@ -58,13 +54,7 @@ const AdminPanel = () => {
 
   const updateUserStatus = async (userId, updates) => {
     try {
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8002'
-      
-      await axios.put(
-        `${apiUrl}/admin/users/${userId}`,
-        updates,
-        { withCredentials: true }
-      )
+      await adminAPI.updateUser(userId, updates)
       
       // Refresh users list
       await fetchUsers()
@@ -75,13 +65,7 @@ const AdminPanel = () => {
 
   const approveUser = async (userId) => {
     try {
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8002'
-      
-      await axios.post(
-        `${apiUrl}/admin/users/${userId}/approve`,
-        {},
-        { withCredentials: true }
-      )
+      await adminAPI.approveUser(userId)
       
       // Refresh users list
       await fetchUsers()
@@ -96,12 +80,7 @@ const AdminPanel = () => {
     }
     
     try {
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8002'
-      
-      await axios.delete(
-        `${apiUrl}/admin/users/${userId}`,
-        { withCredentials: true }
-      )
+      await adminAPI.deleteUser(userId)
       
       // Refresh users list
       await fetchUsers()
