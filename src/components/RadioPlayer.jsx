@@ -123,10 +123,16 @@ function RadioPlayer({ streamUrl }) {
         }
         const data = await response.json()
         
-        // Update thumbnail if track changed
-        if (data.track && data.track.id !== currentTrack?.id) {
-          // console.log('Now playing:', data.track.title, `(${Math.floor(data.position)}s/${Math.floor(data.track.duration)}s)`)
-          setCurrentTrack(data.track)
+        // Always update track info (compare by ID to avoid unnecessary re-renders)
+        if (data.track) {
+          setCurrentTrack(prevTrack => {
+            // Only update if track ID changed or if no previous track
+            if (!prevTrack || prevTrack.id !== data.track.id) {
+              console.log('Track changed:', data.track.title)
+              return data.track
+            }
+            return prevTrack
+          })
         }
       } catch (err) {
         console.error('Failed to fetch now-playing:', err)
@@ -136,11 +142,11 @@ function RadioPlayer({ streamUrl }) {
     // Fetch immediately
     fetchNowPlaying()
     
-    // Poll every 10 seconds
-    const intervalId = setInterval(fetchNowPlaying, 10000)
+    // Poll every 5 seconds for more responsive updates
+    const intervalId = setInterval(fetchNowPlaying, 5000)
     
     return () => clearInterval(intervalId)
-  }, [currentTrack])
+  }, [API_BASE_URL])
 
   const togglePlay = () => {
     if (!playerRef.current) return
@@ -221,6 +227,18 @@ function RadioPlayer({ streamUrl }) {
     <div className="w-full space-y-4">
       {/* Player Controls */}
       <div className="rounded-lg border border-border shadow-sm bg-card p-6">
+        {/* Now Playing Info */}
+        {currentTrack && (
+          <div className="mb-4 pb-4 border-b border-border">
+            <p className="text-xs text-muted-foreground mb-1">Now Playing</p>
+            <h3 className="text-sm font-semibold text-foreground line-clamp-2">{currentTrack.title}</h3>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+              <span className="text-xs font-medium text-red-500">LIVE</span>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center justify-between mb-4">
           {/* Play/Pause Button */}
           <button
@@ -292,42 +310,24 @@ function RadioPlayer({ streamUrl }) {
         </div>
       </div>
 
-      {/* Now Playing Card with Large Thumbnail */}
-      {currentTrack && (
-        <div className="rounded-lg border border-border shadow-sm bg-card overflow-hidden relative">
+      {/* Thumbnail Card */}
+      {currentTrack && currentTrack.thumbnail && (
+        <div className="rounded-lg border border-border shadow-sm bg-card overflow-hidden">
           {/* Large Thumbnail/Lyrics Image */}
-          {currentTrack.thumbnail ? (
-            <img 
-              src={`${API_BASE_URL}${currentTrack.thumbnail}`}
-              alt={currentTrack.title}
-              className="w-full object-cover object-top bg-gradient-to-br from-saffron-50 to-saffron-100 dark:from-saffron-950 dark:to-saffron-900"
-              onError={(e) => {
-                e.target.parentElement.innerHTML = `
-                  <div class="w-full h-[400px] flex items-center justify-center" style="background: linear-gradient(135deg, #FF9933 0%, #F59E0B 100%)">
-                    <svg class="w-32 h-32 text-white" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-                    </svg>
-                  </div>
-                `
-              }}
-            />
-          ) : (
-            <div className="w-full h-[400px] flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #FF9933 0%, #F59E0B 100%)' }}>
-              <svg className="w-32 h-32 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-              </svg>
-            </div>
-          )}
-          
-          {/* Track Info Overlay */}
-          <div className="p-4 bg-gradient-to-t from-black/80 to-transparent absolute bottom-0 left-0 right-0 text-white">
-            <p className="text-xs opacity-90">Now Playing</p>
-            <h3 className="text-xl font-bold">{currentTrack.title}</h3>
-            <div className="flex items-center gap-2 mt-2">
-              <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-              <span className="text-xs font-medium">LIVE</span>
-            </div>
-          </div>
+          <img 
+            src={`${API_BASE_URL}${currentTrack.thumbnail}`}
+            alt={currentTrack.title}
+            className="w-full object-cover object-top bg-gradient-to-br from-saffron-50 to-saffron-100 dark:from-saffron-950 dark:to-saffron-900"
+            onError={(e) => {
+              e.target.parentElement.innerHTML = `
+                <div class="w-full h-[400px] flex items-center justify-center" style="background: linear-gradient(135deg, #FF9933 0%, #F59E0B 100%)">
+                  <svg class="w-32 h-32 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+                  </svg>
+                </div>
+              `
+            }}
+          />
         </div>
       )}
     </div>
