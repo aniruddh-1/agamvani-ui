@@ -231,6 +231,22 @@ export const adminAPI = {
     const response = await apiClient.delete(`/admin/users/${userId}`);
     return response.data;
   },
+
+  // Invitations
+  generateInvitation: async (data) => {
+    const response = await apiClient.post('/admin/invitations/generate', data);
+    return response.data;
+  },
+
+  getInvitations: async () => {
+    const response = await apiClient.get('/admin/invitations');
+    return response.data;
+  },
+
+  revokeInvitation: async (invitationId) => {
+    const response = await apiClient.delete(`/admin/invitations/${invitationId}`);
+    return response.data;
+  },
 };
 
 /**
