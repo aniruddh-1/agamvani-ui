@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Agam Vani</string>
-    <string name="title_activity_main">Agam Vani</string>
+    <string name="app_name">अगम वाणी</string>
+    <string name="title_activity_main">अगम वाणी</string>
     <string name="package_name">in.ramsabha.agamvani</string>
     <string name="custom_url_scheme">in.ramsabha.agamvani</string>
 </resources>
