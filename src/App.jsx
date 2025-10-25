@@ -236,8 +236,19 @@ const RadioPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 p-6">
-      {/* User Info Header with Profile Menu - Top Right - Fixed, not zoomable */}
-      <div className="fixed top-4 right-4 z-[100]">
+      {/* Zoomable content wrapper */}
+      <div
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{
+          transform: `scale(${pageScale}) translate(${pagePosition.x / pageScale}px, ${pagePosition.y / pageScale}px)`,
+          transformOrigin: 'center top',
+          transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+        }}
+      >
+      {/* User Info Header with Profile Menu - Top Right */}
+      <div className="absolute top-4 right-4 z-50">
         <div className="spiritual-card p-4 flex items-center gap-4">
           <div className="text-sm">
             <p className="font-medium text-foreground">{user?.full_name || user?.email}</p>
@@ -330,22 +341,11 @@ const RadioPage = () => {
         </div>
       </div>
 
-      {/* Admin Invite Button - Fixed Position - not zoomable */}
+      {/* Admin Invite Button - Fixed Position */}
       {user?.is_admin && <InviteButton />}
 
-      {/* Zoomable content wrapper */}
-      <div
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        style={{
-          transform: `scale(${pageScale}) translate(${pagePosition.x / pageScale}px, ${pagePosition.y / pageScale}px)`,
-          transformOrigin: 'center top',
-          transition: isDragging ? 'none' : 'transform 0.1s ease-out',
-        }}
-      >
       {/* Two Column Layout */}
-      <div className="max-w-7xl mx-auto pt-20">
+      <div className="max-w-7xl mx-auto pt-28">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           {/* Left Column - Logo and Description */}
           <div className="space-y-6">
