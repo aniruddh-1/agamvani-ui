@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X, Copy, Check, Send, Calendar } from 'lucide-react';
-import { API_ROOT_URL } from '../../config/constants';
+import { adminAPI } from '../../lib/api';
 
 const InviteUserModal = ({ isOpen, onClose }) => {
   const [step, setStep] = useState('form'); // 'form' or 'success'
@@ -43,26 +43,13 @@ const InviteUserModal = ({ isOpen, onClose }) => {
         payload.invited_email = formData.invited_email.trim();
       }
 
-      const response = await fetch(`${API_ROOT_URL}/admin/invitations/generate`, {
-        method: 'POST',
-        credentials: 'include', // Include cookies for authentication
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to generate invitation');
-      }
-
-      const invite = await response.json();
+      const invite = await adminAPI.generateInvitation(payload);
       setGeneratedInvite(invite);
       setStep('success');
       
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate invitation');
+      const errorMessage = err.response?.data?.detail || err.message || 'Failed to generate invitation';
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
