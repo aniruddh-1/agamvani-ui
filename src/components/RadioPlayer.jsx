@@ -300,10 +300,10 @@ function RadioPlayer({ streamUrl }) {
             <img 
               src={`${API_BASE_URL}${currentTrack.thumbnail}`}
               alt={currentTrack.title}
-              className="w-full h-[1000px] object-contain bg-gradient-to-br from-saffron-50 to-saffron-100 dark:from-saffron-950 dark:to-saffron-900"
+              className="w-full object-cover object-top bg-gradient-to-br from-saffron-50 to-saffron-100 dark:from-saffron-950 dark:to-saffron-900"
               onError={(e) => {
                 e.target.parentElement.innerHTML = `
-                  <div class="w-full h-[1000px] flex items-center justify-center" style="background: linear-gradient(135deg, #FF9933 0%, #F59E0B 100%)">
+                  <div class="w-full h-[400px] flex items-center justify-center" style="background: linear-gradient(135deg, #FF9933 0%, #F59E0B 100%)">
                     <svg class="w-32 h-32 text-white" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
                     </svg>
@@ -312,7 +312,7 @@ function RadioPlayer({ streamUrl }) {
               }}
             />
           ) : (
-            <div className="w-full h-[1000px] flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #FF9933 0%, #F59E0B 100%)' }}>
+            <div className="w-full h-[400px] flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #FF9933 0%, #F59E0B 100%)' }}>
               <svg className="w-32 h-32 text-white" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
               </svg>
