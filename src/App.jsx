@@ -120,6 +120,12 @@ const RadioPage = () => {
   const [error, setError] = useState(null)
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  
+  // Zoom functionality
+  const [pageScale, setPageScale] = useState(1)
+  const [pagePosition, setPagePosition] = useState({ x: 0, y: 0 })
+  const [isDragging, setIsDragging] = useState(false)
+  const touchStartRef = useState({ distance: 0, x: 0, y: 0, scale: 1 })[0]
 
   useEffect(() => {
     initializeRadio()
@@ -174,14 +180,67 @@ const RadioPage = () => {
       console.error('Logout error:', err)
     }
   }
+  
+  // Pinch-to-zoom handlers
+  const getDistance = (touch1, touch2) => {
+    const dx = touch1.clientX - touch2.clientX
+    const dy = touch1.clientY - touch2.clientY
+    return Math.sqrt(dx * dx + dy * dy)
+  }
+
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 2) {
+      // Pinch gesture - prevent default to disable scroll
+      e.preventDefault()
+      const distance = getDistance(e.touches[0], e.touches[1])
+      touchStartRef.distance = distance
+      touchStartRef.scale = pageScale
+      touchStartRef.x = pagePosition.x
+      touchStartRef.y = pagePosition.y
+    } else if (e.touches.length === 1 && pageScale > 1) {
+      // Single touch for dragging when zoomed
+      setIsDragging(true)
+      touchStartRef.x = e.touches[0].clientX - pagePosition.x
+      touchStartRef.y = e.touches[0].clientY - pagePosition.y
+      touchStartRef.scale = pageScale
+    }
+    // Allow normal scrolling for single touch when not zoomed
+  }
+
+  const handleTouchMove = (e) => {
+    if (e.touches.length === 2) {
+      // Pinch zoom - prevent scroll during pinch
+      e.preventDefault()
+      const distance = getDistance(e.touches[0], e.touches[1])
+      const scale = (distance / touchStartRef.distance) * touchStartRef.scale
+      const clampedScale = Math.max(1, Math.min(4, scale)) // Limit zoom between 1x and 4x
+      setPageScale(clampedScale)
+      
+      // Reset position when zooming out to 1x
+      if (clampedScale === 1) {
+        setPagePosition({ x: 0, y: 0 })
+      }
+    } else if (e.touches.length === 1 && isDragging && pageScale > 1) {
+      // Pan when zoomed - prevent scroll during pan
+      e.preventDefault()
+      const newX = e.touches[0].clientX - touchStartRef.x
+      const newY = e.touches[0].clientY - touchStartRef.y
+      setPagePosition({ x: newX, y: newY })
+    }
+    // Allow normal scrolling for single touch when not zoomed or dragging
+  }
+
+  const handleTouchEnd = () => {
+    setIsDragging(false)
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 p-6">
-      {/* User Info Header with Profile Menu - Top Right */}
-      <div className="absolute top-4 right-4 z-50">
+      {/* User Info Header with Profile Menu - Top Right - Fixed, not zoomable */}
+      <div className="fixed top-4 right-4 z-[100]">
         <div className="spiritual-card p-4 flex items-center gap-4">
           <div className="text-sm">
-            <p className="font-medium text-foreground">{user?.email}</p>
+            <p className="font-medium text-foreground">{user?.full_name || user?.email}</p>
             <p className="text-xs text-muted-foreground">{user?.is_admin ? 'admin' : 'user'}</p>
           </div>
           <div className="relative profile-menu-container">
@@ -200,7 +259,7 @@ const RadioPage = () => {
               
               {/* Profile Dropdown Menu */}
               {showProfileMenu && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-hidden">
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-[100] overflow-hidden">
                   <div className="py-2">
                     <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
                       <p className="text-sm font-medium text-gray-900">{user?.full_name || 'User'}</p>
@@ -271,9 +330,20 @@ const RadioPage = () => {
         </div>
       </div>
 
-      {/* Admin Invite Button - Fixed Position */}
+      {/* Admin Invite Button - Fixed Position - not zoomable */}
       {user?.is_admin && <InviteButton />}
 
+      {/* Zoomable content wrapper */}
+      <div
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{
+          transform: `scale(${pageScale}) translate(${pagePosition.x / pageScale}px, ${pagePosition.y / pageScale}px)`,
+          transformOrigin: 'center top',
+          transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+        }}
+      >
       {/* Two Column Layout */}
       <div className="max-w-7xl mx-auto pt-20">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
@@ -332,6 +402,7 @@ const RadioPage = () => {
             )}
           </div>
         </div>
+      </div>
       </div>
     </div>
   )
