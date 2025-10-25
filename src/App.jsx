@@ -236,6 +236,9 @@ const RadioPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 p-6">
+      {/* Admin Invite Button - Fixed, not zoomable */}
+      {user?.is_admin && <InviteButton />}
+      
       {/* Zoomable content wrapper */}
       <div
         onTouchStart={handleTouchStart}
@@ -340,9 +343,6 @@ const RadioPage = () => {
           </div>
         </div>
       </div>
-
-      {/* Admin Invite Button - Fixed Position */}
-      {user?.is_admin && <InviteButton />}
 
       {/* Two Column Layout */}
       <div className="max-w-7xl mx-auto pt-28">
