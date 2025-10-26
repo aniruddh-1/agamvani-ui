@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
 import { useAuth } from '../../contexts/AuthContext'
 import { nativeGoogleAuth } from '../../services/nativeGoogleAuth'
-import { API_BASE_URL } from '../../config/constants'
+import { API_BASE_URL, API_ENDPOINTS } from '../../config/constants'
 import axios from 'axios'
 
 const LoginPage = () => {
@@ -183,6 +183,27 @@ const LoginPage = () => {
             <Link to="/register" className="text-saffron-600 hover:text-saffron-700 font-medium">
               Sign up
             </Link>
+          </div>
+
+          <div className="mt-6 pt-6 border-t border-border text-center text-xs text-muted-foreground">
+            By continuing, you agree to our{' '}
+            <a 
+              href={API_ENDPOINTS.PRIVACY_POLICY}
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-saffron-600 hover:text-saffron-700 underline"
+            >
+              Privacy Policy
+            </a>
+            {' '}and{' '}
+            <a 
+              href={API_ENDPOINTS.TERMS_OF_SERVICE}
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-saffron-600 hover:text-saffron-700 underline"
+            >
+              Terms of Service
+            </a>
           </div>
         </div>
       </div>

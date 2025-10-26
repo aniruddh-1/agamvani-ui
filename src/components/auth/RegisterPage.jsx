@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
 import { useAuth } from '../../contexts/AuthContext'
 import { nativeGoogleAuth } from '../../services/nativeGoogleAuth'
-import { API_BASE_URL } from '../../config/constants'
+import { API_BASE_URL, API_ENDPOINTS } from '../../config/constants'
 import axios from 'axios'
 import VerifyOTP from './VerifyOTP'
 
@@ -19,6 +19,7 @@ const RegisterPage = () => {
     confirmPassword: '',
   })
   
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
@@ -36,6 +37,12 @@ const RegisterPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+
+    // Validate terms acceptance
+    if (!acceptedTerms) {
+      setError('Please accept the Privacy Policy and Terms of Service')
+      return
+    }
 
     // Validate full name
     if (formData.fullName.trim().length < 2) {
@@ -219,16 +226,47 @@ const RegisterPage = () => {
               />
             </div>
 
+            <div className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                id="acceptTerms"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                className="mt-1 w-4 h-4 text-saffron-600 border-gray-300 rounded focus:ring-saffron-500"
+                required
+              />
+              <label htmlFor="acceptTerms" className="text-xs text-muted-foreground">
+                I agree to the{' '}
+                <a 
+                  href={API_ENDPOINTS.PRIVACY_POLICY}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-saffron-600 hover:text-saffron-700 underline"
+                >
+                  Privacy Policy
+                </a>
+                {' '}and{' '}
+                <a 
+                  href={API_ENDPOINTS.TERMS_OF_SERVICE}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-saffron-600 hover:text-saffron-700 underline"
+                >
+                  Terms of Service
+                </a>
+              </label>
+            </div>
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !acceptedTerms}
               className="w-full py-3 rounded-lg transition-colors font-medium disabled:opacity-50"
               style={{
-                backgroundColor: loading ? '#9CA3AF' : '#EA580C',
+                backgroundColor: (loading || !acceptedTerms) ? '#9CA3AF' : '#EA580C',
                 color: '#FFFFFF',
               }}
-              onMouseEnter={(e) => !loading && (e.target.style.backgroundColor = '#C2410C')}
-              onMouseLeave={(e) => !loading && (e.target.style.backgroundColor = '#EA580C')}
+              onMouseEnter={(e) => !(loading || !acceptedTerms) && (e.target.style.backgroundColor = '#C2410C')}
+              onMouseLeave={(e) => !(loading || !acceptedTerms) && (e.target.style.backgroundColor = '#EA580C')}
             >
               {loading ? 'Creating account...' : 'Sign Up'}
             </button>

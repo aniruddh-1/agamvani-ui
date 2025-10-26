@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { API_ENDPOINTS } from '../../config/constants';
 
 const RegisterOTP = () => {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ const RegisterOTP = () => {
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -25,6 +27,11 @@ const RegisterOTP = () => {
   };
 
   const validateForm = () => {
+    if (!acceptedTerms) {
+      setError('Please accept the Privacy Policy and Terms of Service');
+      return false;
+    }
+
     if (!formData.fullName || !formData.email || !formData.password) {
       setError('Please fill in all required fields');
       return false;
@@ -174,12 +181,43 @@ const RegisterOTP = () => {
             </div>
           </div>
 
+          <div className="flex items-start gap-2">
+            <input
+              type="checkbox"
+              id="acceptTerms"
+              checked={acceptedTerms}
+              onChange={(e) => setAcceptedTerms(e.target.checked)}
+              className="mt-1 w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+              required
+            />
+            <label htmlFor="acceptTerms" className="text-xs text-gray-600">
+              I agree to the{' '}
+              <a 
+                href={API_ENDPOINTS.PRIVACY_POLICY}
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-orange-600 hover:text-orange-700 underline"
+              >
+                Privacy Policy
+              </a>
+              {' '}and{' '}
+              <a 
+                href={API_ENDPOINTS.TERMS_OF_SERVICE}
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-orange-600 hover:text-orange-700 underline"
+              >
+                Terms of Service
+              </a>
+            </label>
+          </div>
+
           <div>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !acceptedTerms}
               className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
-                loading
+                (loading || !acceptedTerms)
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500'
               }`}

@@ -74,6 +74,10 @@ export const API_ENDPOINTS = {
   RADIO_UPLOAD: `${API_BASE_URL}/api/radio/upload`,
   RADIO_HLS: (filename) => `${STREAM_BASE_URL}/${filename}`,
   RADIO_THUMBNAIL: (filename) => `${API_BASE_URL}/radio/thumbnails/${filename}`,
+  
+  // Legal Pages
+  PRIVACY_POLICY: `${FRONTEND_URL}/privacy-policy`,
+  TERMS_OF_SERVICE: `${FRONTEND_URL}/terms-of-service`,
 };
 
 // Local Storage Keys
