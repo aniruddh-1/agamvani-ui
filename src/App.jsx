@@ -20,6 +20,8 @@ import AccountSettings from './components/profile/AccountSettings'
 import ChangePassword from './components/auth/ChangePassword'
 import AdminPanel from './components/admin/AdminPanel'
 import InviteButton from './components/admin/InviteButton'
+import PrivacyPolicy from './components/legal/PrivacyPage'
+import TermsOfService from './components/legal/TermsPage'
 
 // Loading component
 const LoadingSpinner = ({ message = 'Loading...' }) => (
@@ -569,6 +571,10 @@ function App() {
       {/* OAuth callback routes */}
       <Route path="/auth/success" element={<AuthSuccess />} />
       <Route path="/auth/error" element={<AuthError />} />
+      
+      {/* Legal pages - publicly accessible */}
+      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+      <Route path="/terms-of-service" element={<TermsOfService />} />
       
       {/* Main Radio Route (Protected) */}
       <Route 
