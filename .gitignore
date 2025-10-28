@@ -61,7 +61,7 @@ android/*.keystore
 android/app/build/
 android/app/release/
 *.apk
-android/app/*.aab
+*.aab
 ios/
 
 # Debug

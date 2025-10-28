@@ -71,7 +71,6 @@
     
     <!-- For Android 13+ granular media access -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     
     <!-- Playback notifications (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
