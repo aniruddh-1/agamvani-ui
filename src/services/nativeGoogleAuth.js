@@ -1,6 +1,6 @@
 import { GoogleAuth } from '@southdevs/capacitor-google-auth';
 import { Capacitor } from '@capacitor/core';
-import { GOOGLE_CLIENT_ID } from '../config/constants';
+import { GOOGLE_CLIENT_ID, GOOGLE_ANDROID_CLIENT_ID } from '../config/constants';
 
 export class NativeGoogleAuthService {
   constructor() {
@@ -15,6 +15,7 @@ export class NativeGoogleAuthService {
       if (Capacitor.isNativePlatform()) {
         await GoogleAuth.initialize({
           clientId: GOOGLE_CLIENT_ID, // Web Client ID for server-side verification
+          androidClientId: GOOGLE_ANDROID_CLIENT_ID, // Android Client ID for native auth
           scopes: ['profile', 'email'],
           grantOfflineAccess: true,
           // Force account selection on every sign-in
