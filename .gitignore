@@ -58,11 +58,20 @@ android/local.properties
 android/key.properties
 android/*.jks
 android/*.keystore
+android/app/*.jks
+android/app/*.keystore
 android/app/build/
 android/app/release/
 *.apk
 *.aab
 ios/
+
+# Android signing keys (root level)
+*.jks
+*.keystore
+key.properties
+release-keystore.jks
+*-release.keystore
 
 # Debug
 npm-debug.log*
