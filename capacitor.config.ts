@@ -19,6 +19,10 @@ const config: CapacitorConfig = {
       serverClientId: '420256009464-7vmql14haba955lrp63klmqoidgkkckk.apps.googleusercontent.com',
       androidClientId: '420256009464-pt7hding1jt80js6hseqmhfnekpok4di.apps.googleusercontent.com',
       forceCodeForRefreshToken: true
+    },
+    App: {
+      // Keep app alive in background for audio playback
+      handleBackButton: true
     }
   },
   android: {

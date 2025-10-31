@@ -18,11 +18,52 @@ function RadioPlayer({ streamUrl }) {
     ? streamUrl 
     : `${API_BASE_URL}${streamUrl}`
 
+  // Setup Media Session for background playback
+  useEffect(() => {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: currentTrack?.title || 'Agam Vani Radio',
+        artist: currentTrack?.artist || 'Spiritual Radio',
+        album: 'Live Stream',
+        artwork: [
+          { src: '/logo.png', sizes: '96x96', type: 'image/png' },
+          { src: '/logo.png', sizes: '128x128', type: 'image/png' },
+          { src: '/logo.png', sizes: '192x192', type: 'image/png' },
+          { src: '/logo.png', sizes: '256x256', type: 'image/png' },
+          { src: '/logo.png', sizes: '384x384', type: 'image/png' },
+          { src: '/logo.png', sizes: '512x512', type: 'image/png' },
+        ]
+      })
+
+      navigator.mediaSession.setActionHandler('play', () => {
+        if (playerRef.current) {
+          playerRef.current.play()
+          setIsPlaying(true)
+        }
+      })
+
+      navigator.mediaSession.setActionHandler('pause', () => {
+        if (playerRef.current) {
+          playerRef.current.pause()
+          setIsPlaying(false)
+        }
+      })
+
+      // Update playback state
+      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused'
+    }
+  }, [isPlaying, currentTrack])
+
   // Initialize HLS with custom error recovery
   useEffect(() => {
     if (!playerRef.current || !Hls.isSupported()) return
 
     const video = playerRef.current
+    
+    // Enable background audio on mobile
+    video.setAttribute('playsinline', 'true')
+    video.setAttribute('webkit-playsinline', 'true')
+    
     const hls = new Hls({
       enableWorker: true,
       lowLatencyMode: true,
