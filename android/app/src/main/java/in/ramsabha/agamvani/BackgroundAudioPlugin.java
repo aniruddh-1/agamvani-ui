@@ -1,10 +1,8 @@
 package in.ramsabha.agamvani;
 
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
-import android.os.IBinder;
+import android.os.Build;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -14,35 +12,10 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 @CapacitorPlugin(name = "BackgroundAudio")
 public class BackgroundAudioPlugin extends Plugin {
     
-    private AudioPlaybackService audioService;
-    private boolean serviceBound = false;
-    
-    private ServiceConnection serviceConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            AudioPlaybackService.AudioServiceBinder binder = (AudioPlaybackService.AudioServiceBinder) service;
-            audioService = binder.getService();
-            serviceBound = true;
-        }
-        
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            serviceBound = false;
-            audioService = null;
-        }
-    };
-    
-    @Override
-    public void load() {
-        super.load();
-        // Bind to service
-        Intent intent = new Intent(getContext(), AudioPlaybackService.class);
-        getContext().bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
-    }
-    
     @PluginMethod
-    public void play(PluginCall call) {
+    public void startAudio(PluginCall call) {
         String url = call.getString("url");
+        String title = call.getString("title", "Audio Stream");
         
         if (url == null || url.isEmpty()) {
             call.reject("URL is required");
@@ -50,10 +23,16 @@ public class BackgroundAudioPlugin extends Plugin {
         }
         
         Context context = getContext();
-        Intent intent = new Intent(context, AudioPlaybackService.class);
-        intent.setAction("PLAY");
-        intent.putExtra("url", url);
-        context.startForegroundService(intent);
+        Intent serviceIntent = new Intent(context, AudioPlaybackService.class);
+        serviceIntent.setAction("START_AUDIO");
+        serviceIntent.putExtra("url", url);
+        serviceIntent.putExtra("title", title);
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(serviceIntent);
+        } else {
+            context.startService(serviceIntent);
+        }
         
         JSObject ret = new JSObject();
         ret.put("success", true);
@@ -61,35 +40,10 @@ public class BackgroundAudioPlugin extends Plugin {
     }
     
     @PluginMethod
-    public void pause(PluginCall call) {
-        if (serviceBound && audioService != null) {
-            audioService.pause();
-            JSObject ret = new JSObject();
-            ret.put("success", true);
-            call.resolve(ret);
-        } else {
-            call.reject("Service not bound");
-        }
-    }
-    
-    @PluginMethod
-    public void resume(PluginCall call) {
-        if (serviceBound && audioService != null) {
-            audioService.resume();
-            JSObject ret = new JSObject();
-            ret.put("success", true);
-            call.resolve(ret);
-        } else {
-            call.reject("Service not bound");
-        }
-    }
-    
-    @PluginMethod
-    public void stop(PluginCall call) {
+    public void stopAudio(PluginCall call) {
         Context context = getContext();
-        Intent intent = new Intent(context, AudioPlaybackService.class);
-        intent.setAction("STOP");
-        context.startService(intent);
+        Intent serviceIntent = new Intent(context, AudioPlaybackService.class);
+        context.stopService(serviceIntent);
         
         JSObject ret = new JSObject();
         ret.put("success", true);
@@ -97,25 +51,47 @@ public class BackgroundAudioPlugin extends Plugin {
     }
     
     @PluginMethod
-    public void isPlaying(PluginCall call) {
-        if (serviceBound && audioService != null) {
-            JSObject ret = new JSObject();
-            ret.put("isPlaying", audioService.isPlaying());
-            call.resolve(ret);
-        } else {
-            JSObject ret = new JSObject();
-            ret.put("isPlaying", false);
-            call.resolve(ret);
-        }
+    public void pauseAudio(PluginCall call) {
+        Context context = getContext();
+        Intent serviceIntent = new Intent(context, AudioPlaybackService.class);
+        serviceIntent.setAction("PAUSE_AUDIO");
+        context.startService(serviceIntent);
+        
+        JSObject ret = new JSObject();
+        ret.put("success", true);
+        call.resolve(ret);
     }
     
-    @Override
-    protected void handleOnDestroy() {
-        if (serviceBound) {
-            getContext().unbindService(serviceConnection);
-            serviceBound = false;
+    @PluginMethod
+    public void resumeAudio(PluginCall call) {
+        Context context = getContext();
+        Intent serviceIntent = new Intent(context, AudioPlaybackService.class);
+        serviceIntent.setAction("RESUME_AUDIO");
+        context.startService(serviceIntent);
+        
+        JSObject ret = new JSObject();
+        ret.put("success", true);
+        call.resolve(ret);
+    }
+    
+    @PluginMethod
+    public void updateTrackTitle(PluginCall call) {
+        String title = call.getString("title");
+        
+        if (title == null || title.isEmpty()) {
+            call.reject("Title is required");
+            return;
         }
-        super.handleOnDestroy();
+        
+        Context context = getContext();
+        Intent serviceIntent = new Intent(context, AudioPlaybackService.class);
+        serviceIntent.setAction("UPDATE_TRACK");
+        serviceIntent.putExtra("title", title);
+        context.startService(serviceIntent);
+        
+        JSObject ret = new JSObject();
+        ret.put("success", true);
+        call.resolve(ret);
     }
 }
 

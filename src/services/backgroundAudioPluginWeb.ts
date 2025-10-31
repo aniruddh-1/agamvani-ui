@@ -2,30 +2,30 @@ import { WebPlugin } from '@capacitor/core';
 import type { BackgroundAudioPlugin } from './backgroundAudioPlugin';
 
 export class BackgroundAudioWeb extends WebPlugin implements BackgroundAudioPlugin {
-  async play(options: { url: string }): Promise<{ success: boolean }> {
-    console.log('BackgroundAudioWeb.play', options);
-    // Browser/web implementation - falls back to HTML5 audio
+  async startAudio(options: { url: string; title?: string }): Promise<{ success: boolean }> {
+    console.log('BackgroundAudioWeb.startAudio', options);
+    // Browser/web implementation - falls back to HTML5 audio in RadioPlayer
     return { success: true };
   }
 
-  async pause(): Promise<{ success: boolean }> {
-    console.log('BackgroundAudioWeb.pause');
+  async stopAudio(): Promise<{ success: boolean }> {
+    console.log('BackgroundAudioWeb.stopAudio');
     return { success: true };
   }
 
-  async resume(): Promise<{ success: boolean }> {
-    console.log('BackgroundAudioWeb.resume');
+  async pauseAudio(): Promise<{ success: boolean }> {
+    console.log('BackgroundAudioWeb.pauseAudio');
     return { success: true };
   }
 
-  async stop(): Promise<{ success: boolean }> {
-    console.log('BackgroundAudioWeb.stop');
+  async resumeAudio(): Promise<{ success: boolean }> {
+    console.log('BackgroundAudioWeb.resumeAudio');
     return { success: true };
   }
-
-  async isPlaying(): Promise<{ isPlaying: boolean }> {
-    console.log('BackgroundAudioWeb.isPlaying');
-    return { isPlaying: false };
+  
+  async updateTrackTitle(options: { title: string }): Promise<{ success: boolean }> {
+    console.log('BackgroundAudioWeb.updateTrackTitle', options.title);
+    return { success: true };
   }
 }
 

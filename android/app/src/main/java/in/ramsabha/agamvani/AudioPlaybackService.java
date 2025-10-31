@@ -25,6 +25,7 @@ public class AudioPlaybackService extends Service {
     private MediaSessionCompat mediaSession;
     private MediaSessionConnector mediaSessionConnector;
     private final IBinder binder = new AudioServiceBinder();
+    private String currentTrackTitle = "लाइव स्ट्रीमिंग"; // Default: "Live Streaming" in Hindi
     
     public class AudioServiceBinder extends Binder {
         AudioPlaybackService getService() {
@@ -66,30 +67,44 @@ public class AudioPlaybackService extends Service {
     
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        // Start as foreground service immediately
+        startForeground(NOTIFICATION_ID, createNotification());
+        
         if (intent != null) {
             String action = intent.getAction();
             if (action != null) {
                 switch (action) {
-                    case "PLAY":
+                    case "START_AUDIO":
                         String url = intent.getStringExtra("url");
+                        String title = intent.getStringExtra("title");
+                        if (title != null && !title.isEmpty()) {
+                            currentTrackTitle = title;
+                        }
                         if (url != null) {
                             playUrl(url);
-                        } else {
-                            player.play();
                         }
+                        updateNotification();
                         break;
-                    case "PAUSE":
+                    case "PAUSE_AUDIO":
                         player.pause();
+                        updateNotification();
                         break;
-                    case "STOP":
+                    case "RESUME_AUDIO":
+                        player.play();
+                        updateNotification();
+                        break;
+                    case "STOP_AUDIO":
                         stopPlayback();
+                        break;
+                    case "UPDATE_TRACK":
+                        String newTitle = intent.getStringExtra("title");
+                        if (newTitle != null && !newTitle.isEmpty()) {
+                            updateTrackTitle(newTitle);
+                        }
                         break;
                 }
             }
         }
-        
-        // Start as foreground service
-        startForeground(NOTIFICATION_ID, createNotification());
         
         return START_STICKY;
     }
@@ -115,6 +130,13 @@ public class AudioPlaybackService extends Service {
     
     public boolean isPlaying() {
         return player.isPlaying();
+    }
+    
+    public void updateTrackTitle(String title) {
+        if (title != null && !title.isEmpty()) {
+            currentTrackTitle = title;
+            updateNotification();
+        }
     }
     
     private void stopPlayback() {
@@ -161,9 +183,13 @@ public class AudioPlaybackService extends Service {
         );
         
         return new NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Agam Vani Radio")
-            .setContentText(player.isPlaying() ? "Playing..." : "Paused")
+            .setContentTitle("अगम वाणी")
+            .setContentText(currentTrackTitle)
             .setSmallIcon(R.mipmap.ic_launcher)
+            .setLargeIcon(android.graphics.BitmapFactory.decodeResource(
+                getResources(), 
+                R.mipmap.ic_launcher
+            ))
             .setContentIntent(pendingIntent)
             .addAction(
                 player.isPlaying() ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play,
@@ -172,7 +198,8 @@ public class AudioPlaybackService extends Service {
             )
             .setOngoing(player.isPlaying())
             .setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
-                .setMediaSession(mediaSession.getSessionToken()))
+                .setMediaSession(mediaSession.getSessionToken())
+                .setShowActionsInCompactView(0))
             .build();
     }
     

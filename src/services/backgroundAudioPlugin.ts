@@ -1,11 +1,11 @@
 import { registerPlugin } from '@capacitor/core';
 
 export interface BackgroundAudioPlugin {
-  play(options: { url: string }): Promise<{ success: boolean }>;
-  pause(): Promise<{ success: boolean }>;
-  resume(): Promise<{ success: boolean }>;
-  stop(): Promise<{ success: boolean }>;
-  isPlaying(): Promise<{ isPlaying: boolean }>;
+  startAudio(options: { url: string; title?: string }): Promise<{ success: boolean }>;
+  stopAudio(): Promise<{ success: boolean }>;
+  pauseAudio(): Promise<{ success: boolean }>;
+  resumeAudio(): Promise<{ success: boolean }>;
+  updateTrackTitle(options: { title: string }): Promise<{ success: boolean }>;
 }
 
 const BackgroundAudio = registerPlugin<BackgroundAudioPlugin>('BackgroundAudio', {
