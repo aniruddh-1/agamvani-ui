@@ -1,7 +1,12 @@
 import { useRef, useEffect, useState } from 'react'
 import ReactHlsPlayer from 'react-hls-player'
 import Hls from 'hls.js'
+import { Capacitor } from '@capacitor/core'
+import { registerPlugin } from '@capacitor/core'
 import { API_BASE_URL } from '../config/constants'
+
+// Register the Background Audio plugin
+const BackgroundAudio = registerPlugin('BackgroundAudio')
 
 function RadioPlayer({ streamUrl }) {
   const playerRef = useRef(null)
@@ -12,11 +17,21 @@ function RadioPlayer({ streamUrl }) {
   const [currentTrack, setCurrentTrack] = useState(null)
   const [restartCount, setRestartCount] = useState(0)
   const [isConnecting, setIsConnecting] = useState(false)
+  const isNativeAndroid = Capacitor.getPlatform() === 'android' && Capacitor.isNativePlatform()
 
   // Construct full HLS URL
   const hlsUrl = streamUrl?.startsWith('http') 
     ? streamUrl 
     : `${API_BASE_URL}${streamUrl}`
+
+  // Cleanup native audio on unmount
+  useEffect(() => {
+    return () => {
+      if (isNativeAndroid) {
+        BackgroundAudio.stop().catch(err => console.error('Stop error:', err))
+      }
+    }
+  }, [isNativeAndroid])
 
   // Setup Media Session for background playback
   useEffect(() => {
@@ -36,14 +51,20 @@ function RadioPlayer({ streamUrl }) {
       })
 
       navigator.mediaSession.setActionHandler('play', () => {
-        if (playerRef.current) {
+        if (isNativeAndroid) {
+          BackgroundAudio.resume().catch(err => console.error('Resume error:', err))
+          setIsPlaying(true)
+        } else if (playerRef.current) {
           playerRef.current.play()
           setIsPlaying(true)
         }
       })
 
       navigator.mediaSession.setActionHandler('pause', () => {
-        if (playerRef.current) {
+        if (isNativeAndroid) {
+          BackgroundAudio.pause().catch(err => console.error('Pause error:', err))
+          setIsPlaying(false)
+        } else if (playerRef.current) {
           playerRef.current.pause()
           setIsPlaying(false)
         }
@@ -52,7 +73,7 @@ function RadioPlayer({ streamUrl }) {
       // Update playback state
       navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused'
     }
-  }, [isPlaying, currentTrack])
+  }, [isPlaying, currentTrack, isNativeAndroid])
 
   // Initialize HLS with custom error recovery
   useEffect(() => {
@@ -189,7 +210,24 @@ function RadioPlayer({ streamUrl }) {
     return () => clearInterval(intervalId)
   }, [API_BASE_URL])
 
-  const togglePlay = () => {
+  const togglePlay = async () => {
+    // Use native plugin on Android
+    if (isNativeAndroid) {
+      try {
+        if (isPlaying) {
+          await BackgroundAudio.pause()
+          setIsPlaying(false)
+        } else {
+          await BackgroundAudio.play({ url: hlsUrl })
+          setIsPlaying(true)
+        }
+      } catch (error) {
+        console.error('Native playback error:', error)
+      }
+      return
+    }
+    
+    // Web fallback
     if (!playerRef.current) return
     
     if (isPlaying) {
