@@ -76,6 +76,23 @@
 -dontwarn androidx.**
 
 # ============================================
+# ExoPlayer for Background Audio
+# ============================================
+-keep class com.google.android.exoplayer2.** { *; }
+-keep interface com.google.android.exoplayer2.** { *; }
+-dontwarn com.google.android.exoplayer2.**
+
+# Keep ExoPlayer MediaSession extension
+-keep class com.google.android.exoplayer2.ext.mediasession.** { *; }
+-dontwarn com.google.android.exoplayer2.ext.mediasession.**
+
+# ============================================
+# Background Audio Service
+# ============================================
+-keep class in.ramsabha.agamvani.AudioPlaybackService { *; }
+-keep class in.ramsabha.agamvani.BackgroundAudioPlugin { *; }
+
+# ============================================
 # Serialization
 # ============================================
 -keepclassmembers class * implements java.io.Serializable {
