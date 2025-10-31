@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
+import { App as CapacitorApp } from '@capacitor/app'
 import RadioPlayer from './components/RadioPlayer'
 import { APP_CONFIG, API_ENDPOINTS } from './config/constants'
 import { useAuth } from './contexts/AuthContext'
@@ -410,9 +411,15 @@ const RadioPage = () => {
   )
 }
 
+// Root paths where we should show "press back again to exit"
+const ROOT_PATHS = ['/', '/login', '/register'];
+
 function App() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [initialDeepLinkHandled, setInitialDeepLinkHandled] = useState(false);
+  const lastBackPressTime = useRef(0);
+  const [showExitToast, setShowExitToast] = useState(false);
 
   // Set up deep link navigation handler - only once
   useEffect(() => {
@@ -453,7 +460,45 @@ function App() {
     checkInitialDeepLink();
   }, [navigate, initialDeepLinkHandled]);
 
+  // Handle Android back button
+  useEffect(() => {
+    const handleBackButton = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+      const currentPath = location.pathname;
+      const isRootPath = ROOT_PATHS.includes(currentPath);
+
+      // If not on a root path and can go back in history, navigate back
+      if (!isRootPath && canGoBack) {
+        navigate(-1);
+        return;
+      }
+
+      // If on root path, implement double-tap to exit
+      const currentTime = Date.now();
+      const timeSinceLastPress = currentTime - lastBackPressTime.current;
+
+      if (timeSinceLastPress < 2000) {
+        // Double tap detected within 2 seconds - exit app
+        CapacitorApp.exitApp();
+      } else {
+        // First tap - show toast message
+        lastBackPressTime.current = currentTime;
+        setShowExitToast(true);
+        
+        // Hide toast after 2 seconds
+        setTimeout(() => {
+          setShowExitToast(false);
+        }, 2000);
+      }
+    });
+
+    // Cleanup listener on unmount
+    return () => {
+      handleBackButton.remove();
+    };
+  }, [navigate, location.pathname]);
+
   return (
+    <>
     <Routes>
       {/* Authentication Routes */}
       <Route 
@@ -589,6 +634,14 @@ function App() {
       {/* Catch-all redirect */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+
+    {/* Exit app toast message */}
+    {showExitToast && (
+      <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 px-4 py-3 bg-gray-800 text-white rounded-lg shadow-lg animate-pulse">
+        <p className="text-sm font-medium">Press back again to exit</p>
+      </div>
+    )}
+  </>
   )
 }
 
