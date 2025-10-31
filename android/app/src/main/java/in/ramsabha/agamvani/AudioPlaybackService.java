@@ -6,11 +6,15 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
+import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
+import android.util.Log;
 import androidx.core.app.NotificationCompat;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.MediaItem;
@@ -96,12 +100,16 @@ public class AudioPlaybackService extends Service {
                     case "STOP_AUDIO":
                         stopPlayback();
                         break;
-                    case "UPDATE_TRACK":
-                        String newTitle = intent.getStringExtra("title");
-                        if (newTitle != null && !newTitle.isEmpty()) {
-                            updateTrackTitle(newTitle);
-                        }
-                        break;
+                case "UPDATE_TRACK":
+                    String newTitle = intent.getStringExtra("title");
+                    if (newTitle != null && !newTitle.isEmpty()) {
+                        currentTrackTitle = newTitle;
+                        
+                        // CRITICAL: Update MediaSessionCompat metadata directly (ExoPlayer 2.x pattern)
+                        updateMediaSessionMetadata(newTitle);  // Updates lock screen via MediaSession.setMetadata()
+                        updateNotification();                   // Updates notification drawer
+                    }
+                    break;
                 }
             }
         }
@@ -110,10 +118,15 @@ public class AudioPlaybackService extends Service {
     }
     
     public void playUrl(String url) {
+        // Create simple MediaItem (metadata will be set via MediaSessionCompat.setMetadata())
         MediaItem mediaItem = MediaItem.fromUri(url);
+        
         player.setMediaItem(mediaItem);
         player.prepare();
         player.play();
+        
+        // Set initial MediaSession metadata for lock screen
+        updateMediaSessionMetadata(currentTrackTitle);
     }
     
     public void pause() {
@@ -182,7 +195,7 @@ public class AudioPlaybackService extends Service {
             PendingIntent.FLAG_IMMUTABLE
         );
         
-        return new NotificationCompat.Builder(this, CHANNEL_ID)
+        Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("अगम वाणी")
             .setContentText(currentTrackTitle)
             .setSmallIcon(R.mipmap.ic_launcher)
@@ -197,17 +210,55 @@ public class AudioPlaybackService extends Service {
                 pausePendingIntent
             )
             .setOngoing(player.isPlaying())
+            .setOnlyAlertOnce(true) // Prevent sound/vibration on updates
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // Show on lock screen
+            .setPriority(NotificationCompat.PRIORITY_LOW) // Low priority to avoid alerts
             .setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
                 .setMediaSession(mediaSession.getSessionToken())
                 .setShowActionsInCompactView(0))
             .build();
+        
+        return notification;
+    }
+    
+    /**
+     * CRITICAL METHOD: Updates lock screen metadata!
+     * MediaSessionCompat requires explicit setMetadata() calls (ExoPlayer 2.x pattern)
+     * This is the separate metadata channel that the lock screen reads from
+     */
+    private void updateMediaSessionMetadata(String title) {
+        if (mediaSession == null) {
+            return;
+        }
+        
+        // Get album artwork for lock screen
+        Bitmap albumArt = BitmapFactory.decodeResource(
+            getResources(), 
+            R.mipmap.ic_launcher
+        );
+        
+        // Build MediaMetadataCompat (NOT MediaMetadata - that's Media3!)
+        MediaMetadataCompat metadata = new MediaMetadataCompat.Builder()
+            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
+            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "अगम वाणी")
+            .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, "Live Radio")
+            .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, title)
+            .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, "अगम वाणी")
+            .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, albumArt)
+            .putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, albumArt)
+            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, -1)  // -1 for live streams
+            .build();
+        
+        // CRITICAL: Call setMetadata() on MediaSessionCompat
+        // This is what triggers the lock screen update!
+        mediaSession.setMetadata(metadata);
     }
     
     private void updateNotification() {
-        NotificationManager manager = getSystemService(NotificationManager.class);
-        if (manager != null) {
-            manager.notify(NOTIFICATION_ID, createNotification());
-        }
+        // Use startForeground() instead of NotificationManager.notify() to ensure update
+        // This is more reliable for updating foreground service notifications
+        Notification notification = createNotification();
+        startForeground(NOTIFICATION_ID, notification);
     }
     
     @Override
