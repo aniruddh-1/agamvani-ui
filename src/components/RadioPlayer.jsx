@@ -199,14 +199,14 @@ function RadioPlayer({ streamUrl }) {
 
   // Update track title on native player when track changes
   useEffect(() => {
-    if (isNativeAndroid && currentTrack && isPlaying) {
+    if (isNativeAndroid && currentTrack) {
       BackgroundAudio.updateTrackTitle({ 
         title: currentTrack.title || 'लाइव स्ट्रीमिंग' 
       }).catch(err => 
         console.error('Failed to update track title:', err)
       )
     }
-  }, [isNativeAndroid, currentTrack, isPlaying])
+  }, [isNativeAndroid, currentTrack])
 
   // Cleanup native player on unmount
   useEffect(() => {
