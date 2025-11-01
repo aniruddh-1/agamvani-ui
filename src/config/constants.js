@@ -7,6 +7,17 @@ const isMobileApp = () => {
   return window.Capacitor !== undefined;
 };
 
+// Detect if running in local development
+const isLocalDevelopment = () => {
+  // Check if running on localhost or local IP
+  const hostname = window.location.hostname;
+  return hostname === 'localhost' || 
+         hostname === '127.0.0.1' || 
+         hostname.startsWith('192.168.') || 
+         hostname.startsWith('10.') ||
+         hostname.endsWith('.local');
+};
+
 // API Configuration
 // Use production URL for mobile apps, allow override via env vars
 const getAPIBaseURL = () => {
@@ -14,12 +25,16 @@ const getAPIBaseURL = () => {
   if (import.meta.env.VITE_API_BASE_URL) {
     return import.meta.env.VITE_API_BASE_URL;
   }
-  // Use production URL for mobile apps
-  if (isMobileApp()) {
+  // Use production URL for mobile apps (but not in development)
+  if (isMobileApp() && !isLocalDevelopment()) {
     return 'https://av.ramsabha.in';
   }
-  // Default to localhost for web development
-  return 'http://localhost:8002';
+  // Use localhost for local development
+  if (isLocalDevelopment()) {
+    return 'http://localhost:8002';
+  }
+  // Default to production for deployed web app
+  return 'https://av.ramsabha.in';
 };
 
 export const API_BASE_URL = getAPIBaseURL();
@@ -31,10 +46,12 @@ const getFrontendURL = () => {
   if (import.meta.env.VITE_FRONTEND_URL) {
     return import.meta.env.VITE_FRONTEND_URL;
   }
-  if (isMobileApp()) {
-    return 'https://av.ramsabha.in';
+  // Use localhost for local development
+  if (isLocalDevelopment()) {
+    return 'http://localhost:3001';
   }
-  return 'http://localhost:3001';
+  // Use production URL for mobile apps and deployed web
+  return 'https://av.ramsabha.in';
 };
 
 export const FRONTEND_URL = getFrontendURL();
@@ -118,16 +135,18 @@ export const VALIDATION = {
   EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
 };
 
-// Log configuration to console in development
-// Disabled for cleaner console output
-// if (IS_DEVELOPMENT) {
-//   console.log('📋 App Configuration:', {
-//     API_BASE_URL,
-//     FRONTEND_URL,
-//     NODE_ENV,
-//     GOOGLE_CLIENT_ID: GOOGLE_CLIENT_ID ? '✓ Configured' : '✗ Missing',
-//   });
-// }
+// Log configuration to console for debugging
+if (isLocalDevelopment() || IS_DEVELOPMENT) {
+  console.log('📋 App Configuration:', {
+    hostname: window.location.hostname,
+    isLocalDevelopment: isLocalDevelopment(),
+    isMobileApp: isMobileApp(),
+    API_BASE_URL,
+    FRONTEND_URL,
+    NODE_ENV,
+    MODE: import.meta.env.MODE,
+  });
+}
 
 export default {
   API_BASE_URL,

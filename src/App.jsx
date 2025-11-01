@@ -460,40 +460,53 @@ function App() {
     checkInitialDeepLink();
   }, [navigate, initialDeepLinkHandled]);
 
-  // Handle Android back button
+  // Handle Android back button (mobile only)
   useEffect(() => {
-    const handleBackButton = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
-      const currentPath = location.pathname;
-      const isRootPath = ROOT_PATHS.includes(currentPath);
+    // Only run on mobile platforms
+    if (!window.Capacitor || window.Capacitor.getPlatform() === 'web') {
+      return; // No cleanup needed for web
+    }
 
-      // If not on a root path and can go back in history, navigate back
-      if (!isRootPath && canGoBack) {
-        navigate(-1);
-        return;
-      }
+    let handleBackButton;
+    
+    const setupBackButtonListener = async () => {
+      handleBackButton = await CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+        const currentPath = location.pathname;
+        const isRootPath = ROOT_PATHS.includes(currentPath);
 
-      // If on root path, implement double-tap to exit
-      const currentTime = Date.now();
-      const timeSinceLastPress = currentTime - lastBackPressTime.current;
+        // If not on a root path and can go back in history, navigate back
+        if (!isRootPath && canGoBack) {
+          navigate(-1);
+          return;
+        }
 
-      if (timeSinceLastPress < 2000) {
-        // Double tap detected within 2 seconds - exit app
-        CapacitorApp.exitApp();
-      } else {
-        // First tap - show toast message
-        lastBackPressTime.current = currentTime;
-        setShowExitToast(true);
-        
-        // Hide toast after 2 seconds
-        setTimeout(() => {
-          setShowExitToast(false);
-        }, 2000);
-      }
-    });
+        // If on root path, implement double-tap to exit
+        const currentTime = Date.now();
+        const timeSinceLastPress = currentTime - lastBackPressTime.current;
+
+        if (timeSinceLastPress < 2000) {
+          // Double tap detected within 2 seconds - exit app
+          CapacitorApp.exitApp();
+        } else {
+          // First tap - show toast message
+          lastBackPressTime.current = currentTime;
+          setShowExitToast(true);
+          
+          // Hide toast after 2 seconds
+          setTimeout(() => {
+            setShowExitToast(false);
+          }, 2000);
+        }
+      });
+    };
+
+    setupBackButtonListener();
 
     // Cleanup listener on unmount
     return () => {
-      handleBackButton.remove();
+      if (handleBackButton && typeof handleBackButton.remove === 'function') {
+        handleBackButton.remove();
+      }
     };
   }, [navigate, location.pathname]);
 

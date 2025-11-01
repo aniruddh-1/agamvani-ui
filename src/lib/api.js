@@ -227,6 +227,13 @@ export const adminAPI = {
     return response.data;
   },
 
+  bulkApproveUsers: async (userIds) => {
+    const response = await apiClient.post('/admin/users/bulk-approve', {
+      user_ids: userIds
+    });
+    return response.data;
+  },
+
   deleteUser: async (userId) => {
     const response = await apiClient.delete(`/admin/users/${userId}`);
     return response.data;
