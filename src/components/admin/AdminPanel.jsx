@@ -17,6 +17,8 @@ const AdminPanel = () => {
   })
   const [selectedTab, setSelectedTab] = useState('overview')
   const [selectedUser, setSelectedUser] = useState(null)
+  const [selectedUserIds, setSelectedUserIds] = useState(new Set())
+  const [bulkApproving, setBulkApproving] = useState(false)
 
   // Redirect if not admin
   useEffect(() => {
@@ -45,6 +47,10 @@ const AdminPanel = () => {
         admins: admins,
         verified_users: verifiedUsers
       })
+
+      // Auto-select all pending users by default
+      const pendingUserIds = response.users?.filter(u => u.verification_status === 'pending').map(u => u.id) || []
+      setSelectedUserIds(new Set(pendingUserIds))
     } catch (err) {
       setError('Failed to load users: ' + (err.response?.data?.error || err.message))
     } finally {
@@ -88,6 +94,68 @@ const AdminPanel = () => {
       setError('Failed to delete user: ' + (err.response?.data?.error || err.message))
     }
   }
+
+  const handleSelectUser = (userId, isChecked) => {
+    const newSelectedIds = new Set(selectedUserIds)
+    if (isChecked) {
+      newSelectedIds.add(userId)
+    } else {
+      newSelectedIds.delete(userId)
+    }
+    setSelectedUserIds(newSelectedIds)
+  }
+
+  const handleSelectAll = (isChecked) => {
+    if (isChecked) {
+      const pendingUserIds = users.filter(u => u.verification_status === 'pending').map(u => u.id)
+      setSelectedUserIds(new Set(pendingUserIds))
+    } else {
+      setSelectedUserIds(new Set())
+    }
+  }
+
+  const bulkApproveUsers = async () => {
+    const selectedCount = selectedUserIds.size
+    
+    if (selectedCount === 0) {
+      setError('No users selected for approval')
+      return
+    }
+
+    const selectedUsers = users.filter(u => selectedUserIds.has(u.id))
+    const usersList = selectedUsers.map(u => `- ${u.email} (${u.full_name || u.first_name + ' ' + u.last_name || 'Unknown'})`).join('\n')
+    
+    if (!confirm(`Are you sure you want to approve ${selectedCount} user${selectedCount > 1 ? 's' : ''}?\n\n${usersList}`)) {
+      return
+    }
+
+    try {
+      setBulkApproving(true)
+      setError('')
+      
+      const userIdsArray = Array.from(selectedUserIds)
+      const response = await adminAPI.bulkApproveUsers(userIdsArray)
+      
+      // Show success message
+      if (response.failed_count > 0) {
+        setError(`Approved ${response.approved_count} users. ${response.failed_count} failed.`)
+      } else {
+        setError('')
+      }
+      
+      alert(response.message)
+      
+      // Refresh users list
+      await fetchUsers()
+    } catch (err) {
+      setError('Failed to bulk approve users: ' + (err.response?.data?.error || err.message))
+    } finally {
+      setBulkApproving(false)
+    }
+  }
+
+  const pendingUsers = users.filter(u => u.verification_status === 'pending')
+  const isAllPendingSelected = pendingUsers.length > 0 && pendingUsers.every(u => selectedUserIds.has(u.id))
 
   useEffect(() => {
     if (user?.is_admin) {
@@ -353,13 +421,24 @@ const AdminPanel = () => {
           <div className="spiritual-card p-6">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-semibold text-foreground">User Management</h3>
-              <button
-                onClick={fetchUsers}
-                disabled={loading}
-                className="px-4 py-2 bg-saffron-600 hover:bg-saffron-700 disabled:opacity-50 text-white rounded-lg transition-colors"
-              >
-                {loading ? 'Loading...' : 'Refresh'}
-              </button>
+              <div className="flex gap-3">
+                {pendingUsers.length > 0 && (
+                  <button
+                    onClick={bulkApproveUsers}
+                    disabled={bulkApproving || selectedUserIds.size === 0}
+                    className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
+                  >
+                    {bulkApproving ? 'Approving...' : `Bulk Approve (${selectedUserIds.size})`}
+                  </button>
+                )}
+                <button
+                  onClick={fetchUsers}
+                  disabled={loading}
+                  className="px-4 py-2 bg-saffron-600 hover:bg-saffron-700 disabled:opacity-50 text-white rounded-lg transition-colors"
+                >
+                  {loading ? 'Loading...' : 'Refresh'}
+                </button>
+              </div>
             </div>
 
             {loading ? (
@@ -372,6 +451,17 @@ const AdminPanel = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-border">
+                      {pendingUsers.length > 0 && (
+                        <th className="text-left py-3 px-4 font-medium text-foreground w-12">
+                          <input
+                            type="checkbox"
+                            checked={isAllPendingSelected}
+                            onChange={(e) => handleSelectAll(e.target.checked)}
+                            className="w-4 h-4 text-green-600 rounded focus:ring-green-500 cursor-pointer"
+                            title="Select all pending users"
+                          />
+                        </th>
+                      )}
                       <th className="text-left py-3 px-4 font-medium text-foreground">User</th>
                       <th className="text-left py-3 px-4 font-medium text-foreground">Status</th>
                       <th className="text-left py-3 px-4 font-medium text-foreground">Joined</th>
@@ -381,6 +471,18 @@ const AdminPanel = () => {
                   <tbody>
                     {users.map(userItem => (
                       <tr key={userItem.id} className="border-b border-border/50 hover:bg-accent/10">
+                        {pendingUsers.length > 0 && (
+                          <td className="py-4 px-4 w-12">
+                            {!userItem.is_admin && userItem.verification_status === 'pending' && (
+                              <input
+                                type="checkbox"
+                                checked={selectedUserIds.has(userItem.id)}
+                                onChange={(e) => handleSelectUser(userItem.id, e.target.checked)}
+                                className="w-4 h-4 text-green-600 rounded focus:ring-green-500 cursor-pointer"
+                              />
+                            )}
+                          </td>
+                        )}
                         <td className="py-4 px-4">
                           <div className="flex items-center space-x-3">
                             <UserAvatar user={userItem} size="w-14 h-14" />
