@@ -27,5 +27,10 @@ export class BackgroundAudioWeb extends WebPlugin implements BackgroundAudioPlug
     console.log('BackgroundAudioWeb.updateTrackTitle', options.title);
     return { success: true };
   }
+
+  async setVolume(options: { volume: number }): Promise<{ success: boolean }> {
+    console.log('BackgroundAudioWeb.setVolume', options.volume);
+    return { success: true };
+  }
 }
 

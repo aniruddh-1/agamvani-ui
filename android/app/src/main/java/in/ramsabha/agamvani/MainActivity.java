@@ -10,6 +10,9 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
+        // Register custom plugins
+        registerPlugin(BackgroundAudioPlugin.class);
+        
         // Keep screen on for audio playback (optional - can be controlled from JS)
         // getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         

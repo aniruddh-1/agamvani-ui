@@ -94,5 +94,31 @@ public class BackgroundAudioPlugin extends Plugin {
         ret.put("success", true);
         call.resolve(ret);
     }
+    
+    @PluginMethod
+    public void setVolume(PluginCall call) {
+        Double volumeDouble = call.getDouble("volume");
+        
+        if (volumeDouble == null) {
+            call.reject("Volume is required");
+            return;
+        }
+        
+        float volume = volumeDouble.floatValue();
+        
+        // Clamp volume between 0 and 1
+        if (volume < 0) volume = 0;
+        if (volume > 1) volume = 1;
+        
+        Context context = getContext();
+        Intent serviceIntent = new Intent(context, AudioPlaybackService.class);
+        serviceIntent.setAction("SET_VOLUME");
+        serviceIntent.putExtra("volume", volume);
+        context.startService(serviceIntent);
+        
+        JSObject ret = new JSObject();
+        ret.put("success", true);
+        call.resolve(ret);
+    }
 }
 

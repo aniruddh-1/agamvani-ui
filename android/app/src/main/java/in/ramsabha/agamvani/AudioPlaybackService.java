@@ -110,6 +110,10 @@ public class AudioPlaybackService extends Service {
                         updateNotification();                   // Updates notification drawer
                     }
                     break;
+                case "SET_VOLUME":
+                    float volume = intent.getFloatExtra("volume", 1.0f);
+                    player.setVolume(volume);
+                    break;
                 }
             }
         }

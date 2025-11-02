@@ -6,6 +6,7 @@ export interface BackgroundAudioPlugin {
   pauseAudio(): Promise<{ success: boolean }>;
   resumeAudio(): Promise<{ success: boolean }>;
   updateTrackTitle(options: { title: string }): Promise<{ success: boolean }>;
+  setVolume(options: { volume: number }): Promise<{ success: boolean }>;
 }
 
 const BackgroundAudio = registerPlugin<BackgroundAudioPlugin>('BackgroundAudio', {
