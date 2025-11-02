@@ -25,11 +25,11 @@ const getAPIBaseURL = () => {
   if (import.meta.env.VITE_API_BASE_URL) {
     return import.meta.env.VITE_API_BASE_URL;
   }
-  // Use production URL for mobile apps (but not in development)
-  if (isMobileApp() && !isLocalDevelopment()) {
+  // ALWAYS use production URL for mobile apps (APK/AAB)
+  if (isMobileApp()) {
     return 'https://av.ramsabha.in';
   }
-  // Use localhost for local development
+  // Use localhost for local web development
   if (isLocalDevelopment()) {
     return 'http://localhost:8002';
   }

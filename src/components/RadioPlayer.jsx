@@ -297,11 +297,22 @@ function RadioPlayer({ streamUrl }) {
     }
   }, [isPlaying])
 
-  const handleVolumeChange = (e) => {
+  const handleVolumeChange = async (e) => {
     const newVolume = parseFloat(e.target.value)
     setVolume(newVolume)
+    
+    // Update HTML5 player for web
     if (playerRef.current) {
       playerRef.current.volume = newVolume
+    }
+    
+    // Update native player volume on Android
+    if (isNativeAndroid) {
+      try {
+        await BackgroundAudio.setVolume({ volume: newVolume })
+      } catch (error) {
+        console.error('Failed to set native player volume:', error)
+      }
     }
   }
 
