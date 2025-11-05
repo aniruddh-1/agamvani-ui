@@ -31,9 +31,39 @@ function DailySchedule() {
 
   useEffect(() => {
     fetchSchedule()
-    
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchSchedule, 30000)
+    // No auto-refresh - only fetch on mount or when user clicks refresh button
+  }, [])
+
+  // Poll for now-playing to update the current track highlight
+  useEffect(() => {
+    const fetchNowPlaying = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/radio/now-playing`)
+        if (!response.ok) return
+        
+        const data = await response.json()
+        if (data.track && data.track.code) {
+          // Update the current track code in the schedule
+          setSchedule(prevSchedule => {
+            if (!prevSchedule) return prevSchedule
+            // Only update if the track code changed
+            if (prevSchedule.current_track_code !== data.track.code) {
+              return {
+                ...prevSchedule,
+                current_track_code: data.track.code,
+                current_track_id: data.track.id
+              }
+            }
+            return prevSchedule
+          })
+        }
+      } catch (err) {
+        // Silently fail - don't spam console
+      }
+    }
+
+    // Poll every 5 seconds for track changes
+    const interval = setInterval(fetchNowPlaying, 5000)
     return () => clearInterval(interval)
   }, [])
 
