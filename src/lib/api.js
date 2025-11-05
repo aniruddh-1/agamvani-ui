@@ -197,6 +197,11 @@ export const radioAPI = {
     return response.data;
   },
 
+  getDailySchedule: async () => {
+    const response = await apiClient.get('/api/radio/daily-schedule');
+    return response.data;
+  },
+
   uploadAudio: async (formData, adminKey) => {
     const response = await apiClient.post('/api/radio/upload', formData, {
       headers: {
