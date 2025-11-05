@@ -5,8 +5,10 @@ import { Capacitor } from '@capacitor/core'
 import { App as CapApp } from '@capacitor/app'
 import BackgroundAudio from '../services/backgroundAudioPlugin'
 import { API_BASE_URL } from '../config/constants'
+import DailySchedule from './DailySchedule'
 
 function RadioPlayer({ streamUrl }) {
+  const [activeTab, setActiveTab] = useState('player') // 'player' or 'schedule'
   const playerRef = useRef(null)
   const hlsRef = useRef(null)
   const retryIntervalRef = useRef(null)
@@ -326,8 +328,57 @@ function RadioPlayer({ streamUrl }) {
 
   return (
     <div className="w-full space-y-4">
-      {/* Player Controls */}
-      <div className="rounded-lg border border-border shadow-sm bg-card p-6">
+      {/* Hidden HLS Player - Always rendered, only hidden visually */}
+      {!isNativeAndroid && (
+        <div style={{ display: 'none' }}>
+          <ReactHlsPlayer
+            src={hlsUrl}
+            playerRef={playerRef}
+            autoPlay={false}
+            controls={false}
+            loop={true}
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
+            onEnded={() => {
+              // Auto-restart when stream ends
+              if (playerRef.current) {
+                playerRef.current.currentTime = 0
+                playerRef.current.play()
+              }
+            }}
+          />
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="flex border-b border-border">
+        <button
+          onClick={() => setActiveTab('player')}
+          className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${
+            activeTab === 'player'
+              ? 'text-saffron-600 border-b-2 border-saffron-600'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Player
+        </button>
+        <button
+          onClick={() => setActiveTab('schedule')}
+          className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${
+            activeTab === 'schedule'
+              ? 'text-saffron-600 border-b-2 border-saffron-600'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Schedule
+        </button>
+      </div>
+
+      {/* Player Tab Content */}
+      {activeTab === 'player' && (
+        <>
+          {/* Player Controls */}
+          <div className="rounded-lg border border-border shadow-sm bg-card p-6">
         {/* Now Playing Info */}
         {currentTrack && (
           <div className="mb-4 pb-4 border-b border-border">
@@ -376,28 +427,6 @@ function RadioPlayer({ streamUrl }) {
           </div>
         </div>
 
-        {/* Hidden HLS Player - Only for web, not used on Android native */}
-        {!isNativeAndroid && (
-          <div style={{ display: 'none' }}>
-            <ReactHlsPlayer
-              src={hlsUrl}
-              playerRef={playerRef}
-              autoPlay={false}
-              controls={false}
-              loop={true}
-              onPlay={() => setIsPlaying(true)}
-              onPause={() => setIsPlaying(false)}
-              onEnded={() => {
-                // Auto-restart when stream ends
-                if (playerRef.current) {
-                  playerRef.current.currentTime = 0
-                  playerRef.current.play()
-                }
-              }}
-            />
-          </div>
-        )}
-
         {/* Status */}
         <div className="text-center text-sm text-muted-foreground">
           {isConnecting && isPlaying ? (
@@ -413,25 +442,32 @@ function RadioPlayer({ streamUrl }) {
         </div>
       </div>
 
-      {/* Thumbnail Card */}
-      {currentTrack && currentTrack.thumbnail && (
-        <div className="rounded-lg border border-border shadow-sm bg-card overflow-hidden">
-          {/* Large Thumbnail/Lyrics Image */}
-          <img 
-            src={`${API_BASE_URL}${currentTrack.thumbnail}`}
-            alt={currentTrack.title}
-            className="w-full object-cover object-top bg-gradient-to-br from-saffron-50 to-saffron-100 dark:from-saffron-950 dark:to-saffron-900"
-            onError={(e) => {
-              e.target.parentElement.innerHTML = `
-                <div class="w-full h-[400px] flex items-center justify-center" style="background: linear-gradient(135deg, #FF9933 0%, #F59E0B 100%)">
-                  <svg class="w-32 h-32 text-white" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-                  </svg>
-                </div>
-              `
-            }}
-          />
-        </div>
+          {/* Thumbnail Card */}
+          {currentTrack && currentTrack.thumbnail && (
+            <div className="rounded-lg border border-border shadow-sm bg-card overflow-hidden">
+              {/* Large Thumbnail/Lyrics Image */}
+              <img 
+                src={`${API_BASE_URL}${currentTrack.thumbnail}`}
+                alt={currentTrack.title}
+                className="w-full object-cover object-top bg-gradient-to-br from-saffron-50 to-saffron-100 dark:from-saffron-950 dark:to-saffron-900"
+                onError={(e) => {
+                  e.target.parentElement.innerHTML = `
+                    <div class="w-full h-[400px] flex items-center justify-center" style="background: linear-gradient(135deg, #FF9933 0%, #F59E0B 100%)">
+                      <svg class="w-32 h-32 text-white" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+                      </svg>
+                    </div>
+                  `
+                }}
+              />
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Schedule Tab Content */}
+      {activeTab === 'schedule' && (
+        <DailySchedule />
       )}
     </div>
   )

@@ -21,17 +21,18 @@ const isLocalDevelopment = () => {
 // API Configuration
 // Use production URL for mobile apps, allow override via env vars
 const getAPIBaseURL = () => {
-  // First check environment variable
+  // First check environment variable (highest priority)
   if (import.meta.env.VITE_API_BASE_URL) {
     return import.meta.env.VITE_API_BASE_URL;
   }
-  // ALWAYS use production URL for mobile apps (APK/AAB)
-  if (isMobileApp()) {
-    return 'https://av.ramsabha.in';
-  }
-  // Use localhost for local web development
+  // Check for local development BEFORE checking mobile app
+  // This allows testing mobile app features locally
   if (isLocalDevelopment()) {
     return 'http://localhost:8002';
+  }
+  // Use production URL for mobile apps (APK/AAB) when not local
+  if (isMobileApp()) {
+    return 'https://av.ramsabha.in';
   }
   // Default to production for deployed web app
   return 'https://av.ramsabha.in';
