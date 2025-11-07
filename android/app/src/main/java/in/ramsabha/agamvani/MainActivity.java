@@ -1,6 +1,7 @@
 package in.ramsabha.agamvani;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.WindowManager;
 import android.webkit.WebSettings;
 import com.getcapacitor.BridgeActivity;
@@ -13,16 +14,10 @@ public class MainActivity extends BridgeActivity {
         // Register custom plugins
         registerPlugin(BackgroundAudioPlugin.class);
         
-        // Keep screen on for audio playback (optional - can be controlled from JS)
-        // getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        
         // Enable media playback in background
         if (this.bridge != null && this.bridge.getWebView() != null) {
             WebSettings webSettings = this.bridge.getWebView().getSettings();
             webSettings.setMediaPlaybackRequiresUserGesture(false);
-            
-            // Enable DOM storage for better performance
-            // Note: AppCache is deprecated in API 33+ and no longer needed
             webSettings.setDomStorageEnabled(true);
         }
     }

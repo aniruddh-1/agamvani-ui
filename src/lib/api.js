@@ -259,6 +259,35 @@ export const adminAPI = {
     const response = await apiClient.delete(`/admin/invitations/${invitationId}`);
     return response.data;
   },
+
+  // Feedback management
+  getAllFeedback: async (filters = {}) => {
+    const params = new URLSearchParams();
+    if (filters.status) params.append('status', filters.status);
+    if (filters.type) params.append('type', filters.type);
+    const response = await apiClient.get(`/admin/feedback?${params.toString()}`);
+    return response.data;
+  },
+
+  updateFeedback: async (feedbackId, updates) => {
+    const response = await apiClient.put(`/admin/feedback/${feedbackId}`, updates);
+    return response.data;
+  },
+
+  deleteFeedback: async (feedbackId) => {
+    const response = await apiClient.delete(`/admin/feedback/${feedbackId}`);
+    return response.data;
+  },
+};
+
+/**
+ * Feedback API
+ */
+export const feedbackAPI = {
+  submitFeedback: async (data) => {
+    const response = await apiClient.post('/api/feedback', data);
+    return response.data;
+  },
 };
 
 /**
@@ -276,5 +305,6 @@ export default {
   userAPI,
   radioAPI,
   adminAPI,
+  feedbackAPI,
   healthAPI,
 };

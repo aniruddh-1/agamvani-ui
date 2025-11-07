@@ -6,6 +6,7 @@ import { App as CapApp } from '@capacitor/app'
 import BackgroundAudio from '../services/backgroundAudioPlugin'
 import { API_BASE_URL } from '../config/constants'
 import DailySchedule from './DailySchedule'
+import { Download } from 'lucide-react'
 
 function RadioPlayer({ streamUrl }) {
   const [activeTab, setActiveTab] = useState('player') // 'player' or 'schedule'
@@ -17,6 +18,7 @@ function RadioPlayer({ streamUrl }) {
   const [currentTrack, setCurrentTrack] = useState(null)
   const [restartCount, setRestartCount] = useState(0)
   const [isConnecting, setIsConnecting] = useState(false)
+  const [downloading, setDownloading] = useState(false)
   
   // Use native player on Android, HTML5 on web
   const isNativeAndroid = Capacitor.getPlatform() === 'android' && Capacitor.isNativePlatform()
@@ -318,6 +320,41 @@ function RadioPlayer({ streamUrl }) {
     }
   }
 
+  const downloadTrackImage = async () => {
+    if (!currentTrack) return
+    
+    try {
+      setDownloading(true)
+      
+      // Simply download the original thumbnail image
+      const thumbnailUrl = `${API_BASE_URL}${currentTrack.thumbnail}`
+      
+      // Fetch the image
+      const response = await fetch(thumbnailUrl)
+      const blob = await response.blob()
+      
+      // Create download link
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      
+      // Extract original filename from thumbnail path
+      const originalFilename = currentTrack.thumbnail.split('/').pop()
+      a.download = originalFilename
+      
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      
+    } catch (error) {
+      console.error('Failed to download image:', error)
+      alert('Failed to download image. Please try again.')
+    } finally {
+      setDownloading(false)
+    }
+  }
+
   if (!streamUrl) {
     return <div className="text-center text-muted-foreground py-4">No stream available</div>
   }
@@ -349,6 +386,28 @@ function RadioPlayer({ streamUrl }) {
           />
         </div>
       )}
+
+      {/* Platform Link Banner */}
+      <div className="rounded-lg p-4 shadow-spiritual animate-peaceful-fade" style={{ background: 'linear-gradient(135deg, #FF9933 0%, #F59E0B 100%)' }}>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex-1 text-center sm:text-left">
+            <h3 className="text-white font-bold text-lg mb-1 drop-shadow-md">
+              अगम देश की अणभै वाणी
+            </h3>
+            <p className="text-white/95 text-sm leading-relaxed drop-shadow">
+              आदि सत्तगुरु सुखरामजी महाराज के कैवल्य-ज्ञान विज्ञान के द्वारा आत्म अनुभूति एवं जीवित अवस्था में परममोक्ष तक की यात्रा सुगम करें।
+            </p>
+          </div>
+          <a 
+            href="https://vani.ramsabha.in"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-6 py-3 bg-white text-saffron-600 font-bold rounded-full hover:shadow-divine transition-all hover:scale-105 whitespace-nowrap"
+          >
+            Visit Website →
+          </a>
+        </div>
+      </div>
 
       {/* Tabs */}
       <div className="flex border-b border-border">
@@ -409,7 +468,7 @@ function RadioPlayer({ streamUrl }) {
             )}
           </button>
 
-          {/* Volume Control */}
+          {/* Volume Control and Download */}
           <div className="flex items-center gap-3">
             <svg className="w-5 h-5 text-muted-foreground" fill="currentColor" viewBox="0 0 24 24">
               <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" />
@@ -424,6 +483,22 @@ function RadioPlayer({ streamUrl }) {
               className="w-32 h-2 bg-muted rounded-lg appearance-none cursor-pointer"
               style={{ accentColor: '#FF9933' }}
             />
+            
+            {/* Download Button */}
+            {currentTrack && (
+              <button
+                onClick={downloadTrackImage}
+                disabled={downloading}
+                className="p-2 hover:bg-muted rounded-lg transition-colors disabled:opacity-50"
+                title="Download track image"
+              >
+                {downloading ? (
+                  <div className="w-5 h-5 border-2 border-saffron-500 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Download className="w-5 h-5 text-saffron-500" />
+                )}
+              </button>
+            )}
           </div>
         </div>
 

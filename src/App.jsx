@@ -21,6 +21,7 @@ import AccountSettings from './components/profile/AccountSettings'
 import ChangePassword from './components/auth/ChangePassword'
 import AdminPanel from './components/admin/AdminPanel'
 import InviteButton from './components/admin/InviteButton'
+import FeedbackButton from './components/FeedbackButton'
 import PrivacyPolicy from './components/legal/PrivacyPage'
 import TermsOfService from './components/legal/TermsPage'
 
@@ -241,6 +242,9 @@ const RadioPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 p-6">
       {/* Admin Invite Button - Fixed, not zoomable */}
       {user?.is_admin && <InviteButton />}
+      
+      {/* Feedback Button - Fixed, available to all authenticated users */}
+      <FeedbackButton />
       
       {/* Zoomable content wrapper */}
       <div
