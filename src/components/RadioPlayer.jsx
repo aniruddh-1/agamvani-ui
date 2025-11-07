@@ -518,7 +518,7 @@ function RadioPlayer({ streamUrl }) {
 
       {/* Schedule Tab Content */}
       {activeTab === 'schedule' && (
-        <DailySchedule />
+        <DailySchedule isActive={activeTab === 'schedule'} />
       )}
     </div>
   )
