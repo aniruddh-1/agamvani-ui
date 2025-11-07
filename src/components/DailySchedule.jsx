@@ -3,7 +3,7 @@ import { Copy, Check } from 'lucide-react'
 import { useRadioCache } from '../contexts/RadioCacheContext'
 import LazyImage from './LazyImage'
 
-function DailySchedule() {
+function DailySchedule({ isActive = false }) {
   const { schedule: contextSchedule, nowPlaying, fetchSchedule: contextFetchSchedule } = useRadioCache()
   const [schedule, setSchedule] = useState(contextSchedule)
   const [loading, setLoading] = useState(!contextSchedule)
@@ -11,6 +11,7 @@ function DailySchedule() {
   const [expandedSlots, setExpandedSlots] = useState(new Set())
   const [copiedId, setCopiedId] = useState(null)
   const currentTrackRef = useRef(null)
+  const hasScrolledRef = useRef(false)
 
   // Update local schedule when context schedule changes
   useEffect(() => {
@@ -18,11 +19,6 @@ function DailySchedule() {
       setSchedule(contextSchedule)
       setLoading(false)
       setError(null)
-      
-      // Auto-expand current slot
-      if (contextSchedule.current_slot) {
-        setExpandedSlots(new Set([contextSchedule.current_slot]))
-      }
     }
   }, [contextSchedule])
 
@@ -64,14 +60,66 @@ function DailySchedule() {
     }
   }, []) // Only run on mount
 
-  // Auto-scroll to current track when schedule loads
+  // Auto-scroll to current track when schedule tab becomes active
   useEffect(() => {
-    if (schedule && currentTrackRef.current) {
-      setTimeout(() => {
-        currentTrackRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      }, 500)
+    if (isActive && schedule && nowPlaying) {
+      // Reset scroll flag when tab becomes active so it can scroll again
+      hasScrolledRef.current = false
+      
+      // Find the slot containing the current track and ensure it's expanded
+      const currentSlot = schedule.slots?.find(slot => 
+        slot.tracks?.some(track => track.code === nowPlaying.code)
+      )
+      
+      if (currentSlot) {
+        // Ensure the slot is expanded
+        setExpandedSlots(prev => new Set([...prev, currentSlot.slot_name]))
+        
+        // Wait a bit for the slot to expand and DOM to update, then scroll
+        const scrollTimeout = setTimeout(() => {
+          if (currentTrackRef.current && !hasScrolledRef.current) {
+            currentTrackRef.current.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'center',
+              inline: 'nearest'
+            })
+            hasScrolledRef.current = true
+          }
+        }, 400)
+        
+        return () => clearTimeout(scrollTimeout)
+      }
     }
-  }, [schedule])
+  }, [isActive, schedule, nowPlaying])
+
+  // Also scroll when schedule first loads (initial load)
+  useEffect(() => {
+    if (schedule && nowPlaying && currentTrackRef.current && !hasScrolledRef.current) {
+      // Find the slot containing the current track
+      const currentSlot = schedule.slots?.find(slot => 
+        slot.tracks?.some(track => track.code === nowPlaying.code)
+      )
+      
+      if (currentSlot) {
+        // Ensure the slot is expanded
+        setExpandedSlots(prev => new Set([...prev, currentSlot.slot_name]))
+        
+        // Wait for DOM to update, then scroll
+        const scrollTimeout = setTimeout(() => {
+          if (currentTrackRef.current) {
+            currentTrackRef.current.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'center',
+              inline: 'nearest'
+            })
+            hasScrolledRef.current = true
+          }
+        }, 600)
+        
+        return () => clearTimeout(scrollTimeout)
+      }
+    }
+  }, [schedule, nowPlaying])
 
   const toggleSlot = (slotName) => {
     const newExpanded = new Set(expandedSlots)
