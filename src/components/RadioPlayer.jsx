@@ -8,15 +8,17 @@ import BackgroundAudio from '../services/backgroundAudioPlugin'
 import { API_BASE_URL } from '../config/constants'
 import DailySchedule from './DailySchedule'
 import { Download, ExternalLink } from 'lucide-react'
+import { useRadioCache } from '../contexts/RadioCacheContext'
+import LazyImage from './LazyImage'
 
 function RadioPlayer({ streamUrl }) {
+  const { nowPlaying } = useRadioCache() // Use shared cached state
   const [activeTab, setActiveTab] = useState('player') // 'player' or 'schedule'
   const playerRef = useRef(null)
   const hlsRef = useRef(null)
   const retryIntervalRef = useRef(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [volume, setVolume] = useState(1)
-  const [currentTrack, setCurrentTrack] = useState(null)
   const [restartCount, setRestartCount] = useState(0)
   const [isConnecting, setIsConnecting] = useState(false)
   const [downloading, setDownloading] = useState(false)
@@ -33,8 +35,8 @@ function RadioPlayer({ streamUrl }) {
   useEffect(() => {
     if ('mediaSession' in navigator) {
       navigator.mediaSession.metadata = new MediaMetadata({
-        title: currentTrack?.title || 'Agam Vani Radio',
-        artist: currentTrack?.artist || 'Spiritual Radio',
+        title: nowPlaying?.title || 'Agam Vani Radio',
+        artist: nowPlaying?.artist || 'Spiritual Radio',
         album: 'Live Stream',
         artwork: [
           { src: '/logo.png', sizes: '96x96', type: 'image/png' },
@@ -63,7 +65,7 @@ function RadioPlayer({ streamUrl }) {
       // Update playback state
       navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused'
     }
-  }, [isPlaying, currentTrack])
+  }, [isPlaying, nowPlaying])
 
   // Native player runs continuously on Android - no switching needed
 
@@ -166,52 +168,16 @@ function RadioPlayer({ streamUrl }) {
     }
   }, [isPlaying])
 
-  // Fetch now-playing from server
-  useEffect(() => {
-    const fetchNowPlaying = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/radio/now-playing`)
-        if (!response.ok) {
-          console.error('Failed to fetch now-playing')
-          return
-        }
-        const data = await response.json()
-        
-        // Always update track info (compare by ID to avoid unnecessary re-renders)
-        if (data.track) {
-          setCurrentTrack(prevTrack => {
-            // Only update if track ID changed or if no previous track
-            if (!prevTrack || prevTrack.id !== data.track.id) {
-              console.log('Track changed:', data.track.title)
-              return data.track
-            }
-            return prevTrack
-          })
-        }
-      } catch (err) {
-        console.error('Failed to fetch now-playing:', err)
-      }
-    }
-    
-    // Fetch immediately
-    fetchNowPlaying()
-    
-    // Poll every 5 seconds for more responsive updates
-    const intervalId = setInterval(fetchNowPlaying, 5000)
-    
-    return () => clearInterval(intervalId)
-  }, [API_BASE_URL])
-
   // Update track title on native player when track changes
   useEffect(() => {
-    if (isNativeAndroid && currentTrack) {
+    if (isNativeAndroid && nowPlaying) {
       BackgroundAudio.updateTrackTitle({ 
-        title: currentTrack.title || 'लाइव स्ट्रीमिंग' 
+        title: nowPlaying.title || 'लाइव स्ट्रीमिंग' 
       }).catch(err => 
         console.error('Failed to update track title:', err)
       )
     }
-  }, [isNativeAndroid, currentTrack])
+  }, [isNativeAndroid, nowPlaying])
 
   // Cleanup native player on unmount
   useEffect(() => {
@@ -234,7 +200,7 @@ function RadioPlayer({ streamUrl }) {
         } else {
           await BackgroundAudio.startAudio({
             url: hlsUrl,
-            title: currentTrack?.title || 'लाइव स्ट्रीमिंग'
+            title: nowPlaying?.title || 'लाइव स्ट्रीमिंग'
           })
           setIsPlaying(true)
         }
@@ -333,15 +299,15 @@ function RadioPlayer({ streamUrl }) {
   }
 
   const downloadTrackImage = async () => {
-    if (!currentTrack) return
+    if (!nowPlaying) return
     
     try {
       setDownloading(true)
       
-      const thumbnailUrl = `${API_BASE_URL}${currentTrack.thumbnail}`
+      const thumbnailUrl = `${API_BASE_URL}${nowPlaying.thumbnail}`
       const response = await fetch(thumbnailUrl)
       const blob = await response.blob()
-      const originalFilename = currentTrack.thumbnail.split('/').pop()
+      const originalFilename = nowPlaying.thumbnail.split('/').pop()
       
       if (Capacitor.isNativePlatform()) {
         // Android/iOS: Use Filesystem API
@@ -456,10 +422,10 @@ function RadioPlayer({ streamUrl }) {
           {/* Player Controls */}
           <div className="rounded-lg border border-border shadow-sm bg-card p-6">
         {/* Now Playing Info */}
-        {currentTrack && (
+        {nowPlaying && (
           <div className="mb-4 pb-4 border-b border-border">
             <p className="text-xs text-muted-foreground mb-1">Now Playing</p>
-            <h3 className="text-sm font-semibold text-foreground line-clamp-2">{currentTrack.title}</h3>
+            <h3 className="text-sm font-semibold text-foreground line-clamp-2">{nowPlaying.title}</h3>
             <div className="flex items-center gap-2 mt-1">
               <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
               <span className="text-xs font-medium text-red-500">LIVE</span>
@@ -502,7 +468,7 @@ function RadioPlayer({ streamUrl }) {
             />
             
             {/* Download Button */}
-            {currentTrack && (
+            {nowPlaying && (
               <button
                 onClick={downloadTrackImage}
                 disabled={downloading}
@@ -535,22 +501,15 @@ function RadioPlayer({ streamUrl }) {
       </div>
 
           {/* Thumbnail Card */}
-          {currentTrack && currentTrack.thumbnail && (
+          {nowPlaying && nowPlaying.thumbnail && (
             <div className="rounded-lg border border-border shadow-sm bg-card overflow-hidden">
               {/* Large Thumbnail/Lyrics Image */}
-              <img 
-                src={`${API_BASE_URL}${currentTrack.thumbnail}`}
-                alt={currentTrack.title}
+              <LazyImage
+                src={nowPlaying.thumbnail}
+                trackCode={nowPlaying.code}
+                alt={nowPlaying.title}
                 className="w-full object-cover object-top bg-gradient-to-br from-saffron-50 to-saffron-100 dark:from-saffron-950 dark:to-saffron-900"
-                onError={(e) => {
-                  e.target.parentElement.innerHTML = `
-                    <div class="w-full h-[400px] flex items-center justify-center" style="background: linear-gradient(135deg, #FF9933 0%, #F59E0B 100%)">
-                      <svg class="w-32 h-32 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-                      </svg>
-                    </div>
-                  `
-                }}
+                eager={true}
               />
             </div>
           )}

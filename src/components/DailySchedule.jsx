@@ -1,28 +1,50 @@
 import { useState, useEffect, useRef } from 'react'
-import { radioAPI } from '../lib/api'
-import { API_BASE_URL } from '../config/constants'
 import { Copy, Check } from 'lucide-react'
+import { useRadioCache } from '../contexts/RadioCacheContext'
+import LazyImage from './LazyImage'
 
 function DailySchedule() {
-  const [schedule, setSchedule] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const { schedule: contextSchedule, nowPlaying, fetchSchedule: contextFetchSchedule } = useRadioCache()
+  const [schedule, setSchedule] = useState(contextSchedule)
+  const [loading, setLoading] = useState(!contextSchedule)
   const [error, setError] = useState(null)
   const [expandedSlots, setExpandedSlots] = useState(new Set())
   const [copiedId, setCopiedId] = useState(null)
   const currentTrackRef = useRef(null)
 
+  // Update local schedule when context schedule changes
+  useEffect(() => {
+    if (contextSchedule) {
+      setSchedule(contextSchedule)
+      setLoading(false)
+      setError(null)
+      
+      // Auto-expand current slot
+      if (contextSchedule.current_slot) {
+        setExpandedSlots(new Set([contextSchedule.current_slot]))
+      }
+    }
+  }, [contextSchedule])
+
+  // Update schedule with current track code from nowPlaying
+  useEffect(() => {
+    if (nowPlaying && schedule && schedule.current_track_code !== nowPlaying.code) {
+      setSchedule(prevSchedule => {
+        if (!prevSchedule) return prevSchedule
+        return {
+          ...prevSchedule,
+          current_track_code: nowPlaying.code,
+          current_track_id: nowPlaying.id
+        }
+      })
+    }
+  }, [nowPlaying, schedule])
+
   const fetchSchedule = async () => {
     try {
       setLoading(true)
-      const data = await radioAPI.getDailySchedule()
-      setSchedule(data)
-      
-      // Auto-expand current slot
-      if (data.current_slot) {
-        setExpandedSlots(new Set([data.current_slot]))
-      }
-      
       setError(null)
+      await contextFetchSchedule(true) // Force refresh
     } catch (err) {
       console.error('Failed to fetch schedule:', err)
       setError('Failed to load schedule')
@@ -32,42 +54,15 @@ function DailySchedule() {
   }
 
   useEffect(() => {
-    fetchSchedule()
-    // No auto-refresh - only fetch on mount or when user clicks refresh button
-  }, [])
-
-  // Poll for now-playing to update the current track highlight
-  useEffect(() => {
-    const fetchNowPlaying = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/radio/now-playing`)
-        if (!response.ok) return
-        
-        const data = await response.json()
-        if (data.track && data.track.code) {
-          // Update the current track code in the schedule
-          setSchedule(prevSchedule => {
-            if (!prevSchedule) return prevSchedule
-            // Only update if the track code changed
-            if (prevSchedule.current_track_code !== data.track.code) {
-              return {
-                ...prevSchedule,
-                current_track_code: data.track.code,
-                current_track_id: data.track.id
-              }
-            }
-            return prevSchedule
-          })
-        }
-      } catch (err) {
-        // Silently fail - don't spam console
-      }
+    // Fetch schedule on mount if not already cached
+    if (!contextSchedule) {
+      contextFetchSchedule().catch(err => {
+        console.error('Failed to fetch schedule:', err)
+        setError('Failed to load schedule')
+        setLoading(false)
+      })
     }
-
-    // Poll every 5 seconds for track changes
-    const interval = setInterval(fetchNowPlaying, 5000)
-    return () => clearInterval(interval)
-  }, [])
+  }, []) // Only run on mount
 
   // Auto-scroll to current track when schedule loads
   useEffect(() => {
@@ -309,13 +304,11 @@ function DailySchedule() {
 
                         {/* Thumbnail */}
                         <div className="flex-shrink-0">
-                          <img
-                            src={`${API_BASE_URL}${track.thumbnail}`}
+                          <LazyImage
+                            src={track.thumbnail}
+                            trackCode={track.code}
                             alt={track.title}
                             className="w-12 h-12 rounded object-cover bg-muted"
-                            onError={(e) => {
-                              e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24"%3E%3Cpath fill="%23ccc" d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/%3E%3C/svg%3E'
-                            }}
                           />
                         </div>
 

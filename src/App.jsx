@@ -4,6 +4,7 @@ import { App as CapacitorApp } from '@capacitor/app'
 import RadioPlayer from './components/RadioPlayer'
 import { APP_CONFIG, API_ENDPOINTS } from './config/constants'
 import { useAuth } from './contexts/AuthContext'
+import { RadioCacheProvider } from './contexts/RadioCacheContext'
 import { deepLinkService } from './services/deepLinkService'
 
 // Import auth components
@@ -515,7 +516,7 @@ function App() {
   }, [navigate, location.pathname]);
 
   return (
-    <>
+    <RadioCacheProvider>
     <Routes>
       {/* Authentication Routes */}
       <Route 
@@ -658,7 +659,7 @@ function App() {
         <p className="text-sm font-medium">Press back again to exit</p>
       </div>
     )}
-  </>
+    </RadioCacheProvider>
   )
 }
 
