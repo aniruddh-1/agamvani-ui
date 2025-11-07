@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { adminAPI } from '../../lib/api'
+import FeedbackManagement from './FeedbackManagement'
 
 const AdminPanel = () => {
   const navigate = useNavigate()
@@ -312,6 +313,16 @@ const AdminPanel = () => {
                 }`}
               >
                 User Management
+              </button>
+              <button
+                onClick={() => setSelectedTab('feedback')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  selectedTab === 'feedback'
+                    ? 'border-saffron-500 text-saffron-600'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Feedback
               </button>
             </nav>
           </div>
@@ -747,6 +758,13 @@ const AdminPanel = () => {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Feedback Tab */}
+        {selectedTab === 'feedback' && (
+          <div>
+            <FeedbackManagement />
           </div>
         )}
       </div>
