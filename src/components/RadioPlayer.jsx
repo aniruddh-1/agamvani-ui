@@ -3,10 +3,11 @@ import ReactHlsPlayer from 'react-hls-player'
 import Hls from 'hls.js'
 import { Capacitor } from '@capacitor/core'
 import { App as CapApp } from '@capacitor/app'
+import { Filesystem, Directory } from '@capacitor/filesystem'
 import BackgroundAudio from '../services/backgroundAudioPlugin'
 import { API_BASE_URL } from '../config/constants'
 import DailySchedule from './DailySchedule'
-import { Download } from 'lucide-react'
+import { Download, ExternalLink } from 'lucide-react'
 
 function RadioPlayer({ streamUrl }) {
   const [activeTab, setActiveTab] = useState('player') // 'player' or 'schedule'
@@ -320,32 +321,51 @@ function RadioPlayer({ streamUrl }) {
     }
   }
 
+  const convertBlobToBase64 = (blob) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onerror = reject
+      reader.onload = () => {
+        resolve(reader.result.split(',')[1])
+      }
+      reader.readAsDataURL(blob)
+    })
+  }
+
   const downloadTrackImage = async () => {
     if (!currentTrack) return
     
     try {
       setDownloading(true)
       
-      // Simply download the original thumbnail image
       const thumbnailUrl = `${API_BASE_URL}${currentTrack.thumbnail}`
-      
-      // Fetch the image
       const response = await fetch(thumbnailUrl)
       const blob = await response.blob()
-      
-      // Create download link
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      
-      // Extract original filename from thumbnail path
       const originalFilename = currentTrack.thumbnail.split('/').pop()
-      a.download = originalFilename
       
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      if (Capacitor.isNativePlatform()) {
+        // Android/iOS: Use Filesystem API
+        const base64Data = await convertBlobToBase64(blob)
+        
+        await Filesystem.writeFile({
+          path: originalFilename,
+          data: base64Data,
+          directory: Directory.Documents,
+        })
+        
+        alert('Image saved successfully to Documents folder!')
+      } else {
+        // Web: Use existing method
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = originalFilename
+        
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      }
       
     } catch (error) {
       console.error('Failed to download image:', error)
@@ -388,26 +408,23 @@ function RadioPlayer({ streamUrl }) {
       )}
 
       {/* Platform Link Banner */}
-      <div className="rounded-lg p-4 shadow-spiritual animate-peaceful-fade" style={{ background: 'linear-gradient(135deg, #FF9933 0%, #F59E0B 100%)' }}>
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex-1 text-center sm:text-left">
-            <h3 className="text-white font-bold text-lg mb-1 drop-shadow-md">
-              अगम देश की अणभै वाणी
-            </h3>
-            <p className="text-white/95 text-sm leading-relaxed drop-shadow">
-              आदि सत्तगुरु सुखरामजी महाराज के कैवल्य-ज्ञान विज्ञान के द्वारा आत्म अनुभूति एवं जीवित अवस्था में परममोक्ष तक की यात्रा सुगम करें।
-            </p>
-          </div>
-          <a 
-            href="https://vani.ramsabha.in"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-6 py-3 bg-white text-saffron-600 font-bold rounded-full hover:shadow-divine transition-all hover:scale-105 whitespace-nowrap"
-          >
-            Visit Website →
-          </a>
+      <a 
+        href="https://vani.ramsabha.in"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block rounded-lg p-4 shadow-spiritual animate-peaceful-fade hover:shadow-divine transition-all hover:scale-[1.02] cursor-pointer"
+        style={{ background: 'linear-gradient(135deg, #FF9933 0%, #F59E0B 100%)' }}
+      >
+        <div className="text-center relative">
+          <h3 className="text-white font-bold text-lg mb-1 drop-shadow-md flex items-center justify-center gap-2">
+            अगम देश की अणभै वाणी
+            <ExternalLink className="w-5 h-5" />
+          </h3>
+          <p className="text-white/95 text-sm leading-relaxed drop-shadow">
+            आदि सत्तगुरु सुखरामजी महाराज के कैवल्य-ज्ञान विज्ञान के द्वारा आत्म अनुभूति एवं जीवित अवस्था में परममोक्ष तक की यात्रा सुगम करें।
+          </p>
         </div>
-      </div>
+      </a>
 
       {/* Tabs */}
       <div className="flex border-b border-border">
