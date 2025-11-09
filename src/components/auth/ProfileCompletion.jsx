@@ -134,22 +134,45 @@ const ProfileCompletion = () => {
     setProcessingStep('Preparing profile data...')
 
     try {
-      // Validate age if date of birth is provided
-      if (formData.date_of_birth) {
-        const ageValidation = validateAge(formData.date_of_birth)
-        if (!ageValidation.isValid) {
-          setError(ageValidation.message)
-          setLoading(false)
-          setProcessingStep('')
-          return
+      // Validate all required fields
+      const requiredFields = {
+        first_name: 'First Name',
+        last_name: 'Last Name',
+        phone_number: 'Phone Number',
+        address: 'Address',
+        city: 'City',
+        state: 'State',
+        country: 'Country',
+        postal_code: 'Postal Code',
+        date_of_birth: 'Date of Birth',
+        gender: 'Gender'
+      }
+      
+      const missingFields = []
+      for (const [field, label] of Object.entries(requiredFields)) {
+        if (!formData[field] || formData[field].trim() === '') {
+          missingFields.push(label)
         }
       }
       
+      if (missingFields.length > 0) {
+        setError(`Please fill in all required fields: ${missingFields.join(', ')}`)
+        setLoading(false)
+        setProcessingStep('')
+        return
+      }
+      
+      // Validate age
+      const ageValidation = validateAge(formData.date_of_birth)
+      if (!ageValidation.isValid) {
+        setError(ageValidation.message)
+        setLoading(false)
+        setProcessingStep('')
+        return
+      }
+      
       const profileData = {
-        ...formData,
-        // Remove empty strings and replace with null
-        date_of_birth: formData.date_of_birth || null,
-        gender: formData.gender || null
+        ...formData
       }
       
       setProcessingStep('Updating your profile...')
@@ -239,10 +262,22 @@ const ProfileCompletion = () => {
 
   const isStepValid = () => {
     if (currentStep === 1) {
-      return formData.first_name.trim() !== '' && formData.last_name.trim() !== ''
+      return (
+        formData.first_name.trim() !== '' && 
+        formData.last_name.trim() !== '' &&
+        formData.phone_number.trim() !== '' &&
+        formData.date_of_birth.trim() !== '' &&
+        formData.gender.trim() !== ''
+      )
     }
     if (currentStep === 2) {
-      return formData.city.trim() !== '' && formData.state.trim() !== '' && formData.country.trim() !== ''
+      return (
+        formData.city.trim() !== '' && 
+        formData.state.trim() !== '' && 
+        formData.country.trim() !== '' &&
+        formData.postal_code.trim() !== '' &&
+        formData.address.trim() !== ''
+      )
     }
     return true
   }
@@ -350,12 +385,13 @@ const ProfileCompletion = () => {
 
               <div>
                 <label htmlFor="phone_number" className="block text-sm font-medium text-foreground">
-                  Phone Number
+                  Phone Number *
                 </label>
                 <input
                   id="phone_number"
                   name="phone_number"
                   type="tel"
+                  required
                   value={formData.phone_number}
                   onChange={handleInputChange}
                   className="mt-1 block w-full rounded-md border-border shadow-sm focus:border-saffron-500 focus:ring-saffron-500 px-3 py-2"
@@ -364,12 +400,13 @@ const ProfileCompletion = () => {
 
               <div>
                 <label htmlFor="date_of_birth" className="block text-sm font-medium text-foreground">
-                  Date of Birth
+                  Date of Birth *
                 </label>
                 <input
                   id="date_of_birth"
                   name="date_of_birth"
                   type="date"
+                  required
                   value={formData.date_of_birth}
                   onChange={handleInputChange}
                   className="mt-1 block w-full rounded-md border shadow-sm focus:border-saffron-500 focus:ring-saffron-500 px-3 py-2 bg-white"
@@ -392,11 +429,12 @@ const ProfileCompletion = () => {
 
               <div>
                 <label htmlFor="gender" className="block text-sm font-medium text-foreground">
-                  Gender
+                  Gender *
                 </label>
                 <select
                   id="gender"
                   name="gender"
+                  required
                   value={formData.gender}
                   onChange={handleInputChange}
                   className="mt-1 block w-full rounded-md border-border shadow-sm focus:border-saffron-500 focus:ring-saffron-500 px-3 py-2"
@@ -481,12 +519,13 @@ const ProfileCompletion = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label htmlFor="postal_code" className="block text-sm font-medium text-foreground">
-                    Postal Code
+                    Postal Code *
                   </label>
                   <input
                     id="postal_code"
                     name="postal_code"
                     type="text"
+                    required
                     value={formData.postal_code}
                     onChange={handleInputChange}
                     className="mt-1 block w-full rounded-md border-border shadow-sm focus:border-saffron-500 focus:ring-saffron-500 px-3 py-2"
@@ -494,12 +533,13 @@ const ProfileCompletion = () => {
                 </div>
                 <div>
                   <label htmlFor="address" className="block text-sm font-medium text-foreground">
-                    Address
+                    Address *
                   </label>
                   <textarea
                     id="address"
                     name="address"
                     rows={1}
+                    required
                     value={formData.address}
                     onChange={handleInputChange}
                     className="mt-1 block w-full rounded-md border-border shadow-sm focus:border-saffron-500 focus:ring-saffron-500 px-3 py-2"
@@ -516,17 +556,16 @@ const ProfileCompletion = () => {
               
               <div className="bg-accent/30 p-4 rounded-md space-y-2">
                 <p><strong>Name:</strong> {formData.full_name}</p>
-                <p><strong>Phone:</strong> {formData.phone_number || 'Not provided'}</p>
+                <p><strong>Phone:</strong> {formData.phone_number}</p>
+                <p><strong>Date of Birth:</strong> {formData.date_of_birth}</p>
+                <p><strong>Gender:</strong> {
+                  genders.find(g => g.code === formData.gender)?.name || formData.gender
+                }</p>
+                <p><strong>Address:</strong> {formData.address}</p>
                 <p><strong>Location:</strong> {formData.city}, {formData.state}, {
                   countries.find(c => c.code === formData.country)?.name || formData.country
                 }</p>
-                {formData.address && <p><strong>Address:</strong> {formData.address}</p>}
-                {formData.date_of_birth && <p><strong>Date of Birth:</strong> {formData.date_of_birth}</p>}
-                {formData.gender && (
-                  <p><strong>Gender:</strong> {
-                    genders.find(g => g.code === formData.gender)?.name || formData.gender
-                  }</p>
-                )}
+                <p><strong>Postal Code:</strong> {formData.postal_code}</p>
               </div>
               
               <div className="bg-accent/50 p-3 rounded-lg text-sm text-muted-foreground">
