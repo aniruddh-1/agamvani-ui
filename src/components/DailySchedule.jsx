@@ -66,9 +66,9 @@ function DailySchedule({ isActive = false }) {
       // Reset scroll flag when tab becomes active so it can scroll again
       hasScrolledRef.current = false
       
-      // Find the slot containing the current track and ensure it's expanded
+      // Find the CURRENT slot containing the current track and ensure it's expanded
       const currentSlot = schedule.slots?.find(slot => 
-        slot.tracks?.some(track => track.code === nowPlaying.code)
+        slot.is_current && slot.tracks?.some(track => track.code === nowPlaying.code)
       )
       
       if (currentSlot) {
@@ -95,9 +95,9 @@ function DailySchedule({ isActive = false }) {
   // Also scroll when schedule first loads (initial load)
   useEffect(() => {
     if (schedule && nowPlaying && currentTrackRef.current && !hasScrolledRef.current) {
-      // Find the slot containing the current track
+      // Find the CURRENT slot containing the current track
       const currentSlot = schedule.slots?.find(slot => 
-        slot.tracks?.some(track => track.code === nowPlaying.code)
+        slot.is_current && slot.tracks?.some(track => track.code === nowPlaying.code)
       )
       
       if (currentSlot) {
@@ -332,8 +332,8 @@ function DailySchedule({ isActive = false }) {
               {isExpanded && (
                 <div className="border-t border-border">
                   {slot.tracks.map((track, index) => {
-                    // Match by code since schedule tracks use codes, not UUIDs
-                    const isCurrentTrack = track.code === schedule.current_track_code
+                    // Match by code AND ensure it's in the current slot to avoid highlighting duplicates
+                    const isCurrentTrack = track.code === schedule.current_track_code && slot.is_current
 
                     return (
                       <div
