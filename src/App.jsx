@@ -120,7 +120,6 @@ const PublicRoute = ({ children, allowWhenIncomplete = false }) => {
 // Main Radio Page Component
 const RadioPage = () => {
   const [liveStream, setLiveStream] = useState(null)
-  const [playlist, setPlaylist] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const { user, logout } = useAuth()
@@ -147,13 +146,6 @@ const RadioPage = () => {
       }
       const liveData = await liveResponse.json()
       setLiveStream(liveData)
-      
-      // Get playlist for displaying track info
-      const playlistResponse = await fetch(API_ENDPOINTS.RADIO_PLAYLIST)
-      if (playlistResponse.ok) {
-        const playlistData = await playlistResponse.json()
-        setPlaylist(playlistData.playlist || [])
-      }
     } catch (err) {
       console.error('Error initializing radio:', err)
       setError(err.message)

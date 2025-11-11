@@ -86,12 +86,9 @@ export const API_ENDPOINTS = {
   
   // Radio
   RADIO_LIVE: `${API_BASE_URL}/api/radio/live`,
-  RADIO_STREAMS: `${API_BASE_URL}/api/radio/streams`,
-  RADIO_PLAYLIST: `${API_BASE_URL}/api/radio/playlist`,
-  RADIO_STREAM: (filename) => `${API_BASE_URL}/api/radio/stream/${filename}`,
-  RADIO_UPLOAD: `${API_BASE_URL}/api/radio/upload`,
   RADIO_HLS: (filename) => `${STREAM_BASE_URL}/${filename}`,
   RADIO_THUMBNAIL: (filename) => `${API_BASE_URL}/radio/thumbnails/${filename}`,
+  // Removed unused/insecure endpoints: RADIO_STREAMS, RADIO_STREAM, RADIO_UPLOAD
   
   // Legal Pages
   PRIVACY_POLICY: `${FRONTEND_URL}/privacy-policy`,
