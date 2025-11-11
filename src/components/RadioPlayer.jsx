@@ -304,10 +304,14 @@ function RadioPlayer({ streamUrl }) {
     try {
       setDownloading(true)
       
-      const thumbnailUrl = `${API_BASE_URL}${nowPlaying.thumbnail}`
+      // Use image_path if available (vandana/satsang), otherwise use thumbnail (original tracks)
+      const imageUrl = nowPlaying.image_path || nowPlaying.thumbnail
+      if (!imageUrl) return
+      
+      const thumbnailUrl = `${API_BASE_URL}${imageUrl}`
       const response = await fetch(thumbnailUrl)
       const blob = await response.blob()
-      const originalFilename = nowPlaying.thumbnail.split('/').pop()
+      const originalFilename = imageUrl.split('/').pop()
       
       if (Capacitor.isNativePlatform()) {
         // Android/iOS: Use Filesystem API
@@ -501,11 +505,11 @@ function RadioPlayer({ streamUrl }) {
       </div>
 
           {/* Thumbnail Card */}
-          {nowPlaying && nowPlaying.thumbnail && (
+          {nowPlaying && (nowPlaying.thumbnail || nowPlaying.image_path) && (
             <div className="rounded-lg border border-border shadow-sm bg-card overflow-hidden">
               {/* Large Thumbnail/Lyrics Image */}
               <LazyImage
-                src={nowPlaying.thumbnail}
+                src={nowPlaying.image_path || nowPlaying.thumbnail}
                 trackCode={nowPlaying.code}
                 alt={nowPlaying.title}
                 className="w-full object-cover object-top bg-gradient-to-br from-saffron-50 to-saffron-100 dark:from-saffron-950 dark:to-saffron-900"

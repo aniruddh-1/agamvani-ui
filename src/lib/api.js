@@ -182,16 +182,6 @@ export const radioAPI = {
     return response.data;
   },
 
-  getStreams: async () => {
-    const response = await apiClient.get('/api/radio/streams');
-    return response.data;
-  },
-
-  getPlaylist: async () => {
-    const response = await apiClient.get('/api/radio/playlist');
-    return response.data;
-  },
-
   getNowPlaying: async () => {
     const response = await apiClient.get('/api/radio/now-playing');
     return response.data;
@@ -202,15 +192,10 @@ export const radioAPI = {
     return response.data;
   },
 
-  uploadAudio: async (formData, adminKey) => {
-    const response = await apiClient.post('/api/radio/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-        'X-Admin-Key': adminKey,
-      },
-    });
-    return response.data;
-  },
+  // Removed unused endpoints for security:
+  // - getStreams() - not used in UI
+  // - uploadAudio() - not used in UI, poses security risk
+  // Audio management should be done via deployment scripts
 };
 
 /**
