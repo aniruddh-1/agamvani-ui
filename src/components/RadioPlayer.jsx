@@ -509,8 +509,9 @@ function RadioPlayer({ streamUrl }) {
             <div className="rounded-lg border border-border shadow-sm bg-card overflow-hidden">
               {/* Large Thumbnail/Lyrics Image */}
               <LazyImage
+                key={nowPlaying.image_path || nowPlaying.thumbnail}
                 src={nowPlaying.image_path || nowPlaying.thumbnail}
-                trackCode={nowPlaying.code}
+                trackCode={`${nowPlaying.code}-${nowPlaying.id || nowPlaying.file_path || nowPlaying.title}`}
                 alt={nowPlaying.title}
                 className="w-full object-cover object-top bg-gradient-to-br from-saffron-50 to-saffron-100 dark:from-saffron-950 dark:to-saffron-900"
                 eager={true}
