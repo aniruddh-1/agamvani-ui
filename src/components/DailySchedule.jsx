@@ -75,6 +75,11 @@ function DailySchedule({ isActive = false }) {
       // Reset scroll flag when tab becomes active so it can scroll again
       hasScrolledRef.current = false
       
+      // Skip auto-scroll if current track is supplemental (hidden from display)
+      if (nowPlaying.category !== 'original') {
+        return
+      }
+      
       // Find the CURRENT slot containing the current track and ensure it's expanded
       const currentSlot = schedule.slots?.find(slot => 
         slot.slot_name === schedule.current_slot && 
@@ -108,6 +113,11 @@ function DailySchedule({ isActive = false }) {
   // Also scroll when schedule first loads (initial load)
   useEffect(() => {
     if (schedule && nowPlaying && currentTrackRef.current && !hasScrolledRef.current) {
+      // Skip auto-scroll if current track is supplemental (hidden from display)
+      if (nowPlaying.category !== 'original') {
+        return
+      }
+      
       // Find the CURRENT slot containing the current track
       const currentSlot = schedule.slots?.find(slot => 
         slot.slot_name === schedule.current_slot && 
@@ -146,6 +156,12 @@ function DailySchedule({ isActive = false }) {
       newExpanded.add(slotName)
     }
     setExpandedSlots(newExpanded)
+  }
+
+  // Helper function to determine if a track should be displayed in the UI
+  // Only show 'original' tracks, hide supplemental audio (vandana, dhanya, rag, pad-rag, satsang)
+  const shouldShowTrack = (track) => {
+    return track.category === 'original'
   }
 
   const formatDuration = (seconds) => {
@@ -187,9 +203,10 @@ function DailySchedule({ isActive = false }) {
 
   const formatSlotForCopy = (slot) => {
     let text = `🎵 ${slot.slot_label}\n`
-    text += `   कुल: ${slot.tracks.length} ट्रैक, ${formatDuration(slot.total_duration)}\n\n`
+    const visibleTracks = slot.tracks.filter(shouldShowTrack)
+    text += `   कुल: ${visibleTracks.length} ट्रैक, ${formatDuration(slot.total_duration)}\n\n`
     
-    slot.tracks.forEach((track, index) => {
+    visibleTracks.forEach((track, index) => {
       text += `   ${index + 1}. ${track.title} - ${formatTime(track.duration)}\n`
     })
     
@@ -316,7 +333,7 @@ function DailySchedule({ isActive = false }) {
                       )}
                     </div>
                     <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
-                      <span>{slot.tracks.length} tracks</span>
+                      <span>{slot.tracks.filter(shouldShowTrack).length} tracks</span>
                       <span>•</span>
                       <span>{formatDuration(slot.total_duration)}</span>
                     </div>
@@ -349,16 +366,21 @@ function DailySchedule({ isActive = false }) {
               {/* Track List */}
               {isExpanded && (
                 <div className="border-t border-border">
-                  {slot.tracks.map((track, index) => {
+                  {slot.tracks
+                    .filter(shouldShowTrack)
+                    .map((track, displayIndex) => {
                     // Match by code, sequence_number, AND ensure it's in the current slot to avoid highlighting duplicates
                     const isCurrentTrack = 
                       track.code === schedule.current_track_code && 
                       track.sequence_number === schedule.current_sequence_number &&
                       isCurrent
+                    
+                    // Find actual index in full track array for unique key
+                    const actualIndex = slot.tracks.indexOf(track)
 
                     return (
                       <div
-                        key={`${slot.slot_name}-${track.id}-${index}`}
+                        key={`${slot.slot_name}-${track.id}-${actualIndex}`}
                         ref={isCurrentTrack ? currentTrackRef : null}
                         className={`flex items-start gap-3 p-3 border-b border-border last:border-b-0 transition-colors ${
                           isCurrentTrack ? 'bg-saffron-100 dark:bg-saffron-900/30' : 'hover:bg-muted/30'
@@ -367,7 +389,7 @@ function DailySchedule({ isActive = false }) {
                         {/* Track Number */}
                         <div className="flex-shrink-0 w-8 text-center">
                           <span className="text-sm font-medium text-muted-foreground">
-                            {index + 1}
+                            {displayIndex + 1}
                           </span>
                         </div>
 

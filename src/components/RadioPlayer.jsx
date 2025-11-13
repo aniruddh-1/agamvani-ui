@@ -429,7 +429,9 @@ function RadioPlayer({ streamUrl }) {
         {nowPlaying && (
           <div className="mb-4 pb-4 border-b border-border">
             <p className="text-xs text-muted-foreground mb-1">Now Playing</p>
-            <h3 className="text-sm font-semibold text-foreground line-clamp-2">{nowPlaying.title}</h3>
+            <h3 className="text-sm font-semibold text-foreground line-clamp-2">
+              {nowPlaying.category === 'original' ? nowPlaying.title : 'अगम वाणी संगीत'}
+            </h3>
             <div className="flex items-center gap-2 mt-1">
               <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
               <span className="text-xs font-medium text-red-500">LIVE</span>
