@@ -22,17 +22,26 @@ function DailySchedule({ isActive = false }) {
     }
   }, [contextSchedule])
 
-  // Update schedule with current track code from nowPlaying
+  // Update schedule with current track info from nowPlaying
   useEffect(() => {
-    if (nowPlaying && schedule && schedule.current_track_code !== nowPlaying.code) {
-      setSchedule(prevSchedule => {
-        if (!prevSchedule) return prevSchedule
-        return {
-          ...prevSchedule,
-          current_track_code: nowPlaying.code,
-          current_track_id: nowPlaying.id
-        }
-      })
+    if (nowPlaying && schedule) {
+      const needsUpdate = 
+        schedule.current_track_code !== nowPlaying.code ||
+        schedule.current_sequence_number !== nowPlaying.sequence_number ||
+        schedule.current_slot !== nowPlaying.current_slot
+      
+      if (needsUpdate) {
+        setSchedule(prevSchedule => {
+          if (!prevSchedule) return prevSchedule
+          return {
+            ...prevSchedule,
+            current_track_code: nowPlaying.code,
+            current_track_id: nowPlaying.id,
+            current_sequence_number: nowPlaying.sequence_number,
+            current_slot: nowPlaying.current_slot
+          }
+        })
+      }
     }
   }, [nowPlaying, schedule])
 
@@ -68,7 +77,11 @@ function DailySchedule({ isActive = false }) {
       
       // Find the CURRENT slot containing the current track and ensure it's expanded
       const currentSlot = schedule.slots?.find(slot => 
-        slot.is_current && slot.tracks?.some(track => track.code === nowPlaying.code)
+        slot.slot_name === schedule.current_slot && 
+        slot.tracks?.some(track => 
+          track.code === nowPlaying.code && 
+          track.sequence_number === nowPlaying.sequence_number
+        )
       )
       
       if (currentSlot) {
@@ -97,7 +110,11 @@ function DailySchedule({ isActive = false }) {
     if (schedule && nowPlaying && currentTrackRef.current && !hasScrolledRef.current) {
       // Find the CURRENT slot containing the current track
       const currentSlot = schedule.slots?.find(slot => 
-        slot.is_current && slot.tracks?.some(track => track.code === nowPlaying.code)
+        slot.slot_name === schedule.current_slot && 
+        slot.tracks?.some(track => 
+          track.code === nowPlaying.code && 
+          track.sequence_number === nowPlaying.sequence_number
+        )
       )
       
       if (currentSlot) {
@@ -266,7 +283,8 @@ function DailySchedule({ isActive = false }) {
       <div className="space-y-3 pb-6">
         {schedule.slots.map((slot) => {
           const isExpanded = expandedSlots.has(slot.slot_name)
-          const isCurrent = slot.is_current
+          // Dynamically compute is_current based on current_slot from schedule (updated via nowPlaying)
+          const isCurrent = schedule.current_slot === slot.slot_name
 
           return (
             <div
@@ -332,8 +350,11 @@ function DailySchedule({ isActive = false }) {
               {isExpanded && (
                 <div className="border-t border-border">
                   {slot.tracks.map((track, index) => {
-                    // Match by code AND ensure it's in the current slot to avoid highlighting duplicates
-                    const isCurrentTrack = track.code === schedule.current_track_code && slot.is_current
+                    // Match by code, sequence_number, AND ensure it's in the current slot to avoid highlighting duplicates
+                    const isCurrentTrack = 
+                      track.code === schedule.current_track_code && 
+                      track.sequence_number === schedule.current_sequence_number &&
+                      isCurrent
 
                     return (
                       <div
