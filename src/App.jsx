@@ -365,6 +365,23 @@ const RadioPage = () => {
                 <p className="text-base text-foreground leading-relaxed text-center">
                   आदि सत्तगुरु, सर्व आत्माओं के सत्तगुरु, सर्व सृष्टि के सत्तगुरु, सत्तगुरु सुखरामजी महाराज की अणभै वाणी से उनके अनुयायियों द्वारा गायन किए गए पद को श्रवण करने हेतु मंच
                 </p>
+                
+                {/* Google Play Store Badge */}
+                <div className="pt-4 border-t border-border text-center">
+                  <p className="text-xs text-muted-foreground mb-3">Download our mobile app</p>
+                  <a
+                    href="https://play.google.com/store/apps/details?id=in.ramsabha.agamvani"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block transition-transform hover:scale-105"
+                  >
+                    <img
+                      src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png"
+                      alt="Get it on Google Play"
+                      className="h-14 mx-auto"
+                    />
+                  </a>
+                </div>
               </div>
             </div>
           </div>
