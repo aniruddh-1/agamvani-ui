@@ -100,6 +100,23 @@ const LoginPage = () => {
         </div>
 
         <div className="spiritual-card p-8">
+          {/* Google Play Store Badge */}
+          <div className="mb-6 pb-6 border-b border-border text-center">
+            <p className="text-xs text-muted-foreground mb-3">Download our mobile app</p>
+            <a
+              href="https://play.google.com/store/apps/details?id=in.ramsabha.agamvani"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block transition-transform hover:scale-105"
+            >
+              <img
+                src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png"
+                alt="Get it on Google Play"
+                className="h-14"
+              />
+            </a>
+          </div>
+
           {error && (
             <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
               {error}

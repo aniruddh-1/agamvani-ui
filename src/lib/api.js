@@ -77,6 +77,15 @@ export const authAPI = {
       payload.token = data.token;
     }
     const response = await apiClient.post('/auth/verify-otp', payload);
+    
+    // Store tokens in localStorage for mobile/Android compatibility
+    if (response.data.access_token) {
+      localStorage.setItem('access_token', response.data.access_token);
+    }
+    if (response.data.refresh_token) {
+      localStorage.setItem('refresh_token', response.data.refresh_token);
+    }
+    
     return response.data;
   },
 
@@ -86,6 +95,16 @@ export const authAPI = {
       email: data.email,
       password: data.password,
     });
+    
+    // Store tokens in localStorage for mobile/Android compatibility
+    // (cookies may not work reliably in Capacitor WebView)
+    if (response.data.access_token) {
+      localStorage.setItem('access_token', response.data.access_token);
+    }
+    if (response.data.refresh_token) {
+      localStorage.setItem('refresh_token', response.data.refresh_token);
+    }
+    
     return response.data;
   },
 
