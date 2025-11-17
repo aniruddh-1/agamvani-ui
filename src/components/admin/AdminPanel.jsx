@@ -38,7 +38,7 @@ const AdminPanel = () => {
       
       // Calculate stats
       const totalUsers = response.users?.length || 0
-      const pendingVerification = response.users?.filter(u => u.verification_status === 'pending').length || 0
+      const pendingVerification = response.users?.filter(u => u.verification_status === 'pending' && u.profile_completed).length || 0
       const admins = response.users?.filter(u => u.is_admin).length || 0
       const verifiedUsers = response.users?.filter(u => u.is_verified).length || 0
       
@@ -49,8 +49,8 @@ const AdminPanel = () => {
         verified_users: verifiedUsers
       })
 
-      // Auto-select all pending users by default
-      const pendingUserIds = response.users?.filter(u => u.verification_status === 'pending').map(u => u.id) || []
+      // Auto-select all pending users with completed profiles by default
+      const pendingUserIds = response.users?.filter(u => u.verification_status === 'pending' && u.profile_completed).map(u => u.id) || []
       setSelectedUserIds(new Set(pendingUserIds))
     } catch (err) {
       setError('Failed to load users: ' + (err.response?.data?.error || err.message))
@@ -108,7 +108,7 @@ const AdminPanel = () => {
 
   const handleSelectAll = (isChecked) => {
     if (isChecked) {
-      const pendingUserIds = users.filter(u => u.verification_status === 'pending').map(u => u.id)
+      const pendingUserIds = users.filter(u => u.verification_status === 'pending' && u.profile_completed).map(u => u.id)
       setSelectedUserIds(new Set(pendingUserIds))
     } else {
       setSelectedUserIds(new Set())
@@ -155,7 +155,7 @@ const AdminPanel = () => {
     }
   }
 
-  const pendingUsers = users.filter(u => u.verification_status === 'pending')
+  const pendingUsers = users.filter(u => u.verification_status === 'pending' && u.profile_completed)
   const isAllPendingSelected = pendingUsers.length > 0 && pendingUsers.every(u => selectedUserIds.has(u.id))
 
   useEffect(() => {
@@ -484,7 +484,7 @@ const AdminPanel = () => {
                       <tr key={userItem.id} className="border-b border-border/50 hover:bg-accent/10">
                         {pendingUsers.length > 0 && (
                           <td className="py-4 px-4 w-12">
-                            {!userItem.is_admin && userItem.verification_status === 'pending' && (
+                            {!userItem.is_admin && userItem.verification_status === 'pending' && userItem.profile_completed && (
                               <input
                                 type="checkbox"
                                 checked={selectedUserIds.has(userItem.id)}
@@ -508,6 +508,7 @@ const AdminPanel = () => {
                               <div className="flex items-center gap-2 mt-1 flex-wrap">
                                 {userItem.google_id && <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Google</span>}
                                 {userItem.profile_completed && <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">Complete</span>}
+                                {!userItem.profile_completed && <span className="text-xs bg-gray-100 text-gray-800 px-2 py-0.5 rounded">Profile Incomplete</span>}
                                 {userItem.approval_method === 'invitation' && (
                                   <span className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded" title={`Invited by ${userItem.invitation_created_by_email || 'admin'}`}>
                                     📨 Invited
@@ -538,7 +539,7 @@ const AdminPanel = () => {
                               View Details
                             </button>
                             
-                            {!userItem.is_admin && userItem.verification_status === 'pending' && (
+                            {!userItem.is_admin && userItem.verification_status === 'pending' && userItem.profile_completed && (
                               <>
                                 <button
                                   onClick={() => approveUser(userItem.id)}
@@ -725,36 +726,52 @@ const AdminPanel = () => {
                 </div>
                 
                 {/* Action Buttons */}
-                <div className="flex justify-end space-x-3 mt-6 pt-6 border-t">
-                  {!selectedUser.is_admin && selectedUser.verification_status === 'pending' && (
-                    <>
+                <div className="flex justify-between items-center mt-6 pt-6 border-t">
+                  <div>
+                    {selectedUser.id !== user.id && (
                       <button
                         onClick={() => {
-                          approveUser(selectedUser.id)
-                          setSelectedUser(null)
-                        }}
-                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-                      >
-                        Approve User
-                      </button>
-                      <button
-                        onClick={() => {
-                          updateUserStatus(selectedUser.id, { verification_status: 'rejected' })
+                          deleteUser(selectedUser.id)
                           setSelectedUser(null)
                         }}
                         className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
                       >
-                        Reject User
+                        Delete User
                       </button>
-                    </>
-                  )}
+                    )}
+                  </div>
                   
-                  <button
-                    onClick={() => setSelectedUser(null)}
-                    className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition-colors"
-                  >
-                    Close
-                  </button>
+                  <div className="flex space-x-3">
+                    {!selectedUser.is_admin && selectedUser.verification_status === 'pending' && selectedUser.profile_completed && (
+                      <>
+                        <button
+                          onClick={() => {
+                            approveUser(selectedUser.id)
+                            setSelectedUser(null)
+                          }}
+                          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                        >
+                          Approve User
+                        </button>
+                        <button
+                          onClick={() => {
+                            updateUserStatus(selectedUser.id, { verification_status: 'rejected' })
+                            setSelectedUser(null)
+                          }}
+                          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                        >
+                          Reject User
+                        </button>
+                      </>
+                    )}
+                    
+                    <button
+                      onClick={() => setSelectedUser(null)}
+                      className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition-colors"
+                    >
+                      Close
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
