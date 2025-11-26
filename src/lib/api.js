@@ -221,8 +221,10 @@ export const radioAPI = {
  * Admin API
  */
 export const adminAPI = {
-  getUsers: async () => {
-    const response = await apiClient.get('/admin/users');
+  getUsers: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    const url = queryString ? `/admin/users?${queryString}` : '/admin/users';
+    const response = await apiClient.get(url);
     return response.data;
   },
 
