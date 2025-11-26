@@ -20,6 +20,18 @@ const AdminPanel = () => {
   const [selectedUser, setSelectedUser] = useState(null)
   const [selectedUserIds, setSelectedUserIds] = useState(new Set())
   const [bulkApproving, setBulkApproving] = useState(false)
+  
+  // Pagination, filtering, sorting states
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageLimit] = useState(50)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const [filterOption, setFilterOption] = useState('all')
+  const [sortBy, setSortBy] = useState('created_at')
+  const [sortOrder, setSortOrder] = useState('desc')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [toast, setToast] = useState(null)
 
   // Redirect if not admin
   useEffect(() => {
@@ -28,32 +40,60 @@ const AdminPanel = () => {
     }
   }, [user, navigate])
 
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery)
+      setCurrentPage(1) // Reset to first page on search
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  // Show toast notification
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 3000)
+  }
+
   const fetchUsers = async () => {
     try {
       setLoading(true)
+      setError('')
       
-      const response = await adminAPI.getUsers()
+      const params = {
+        page: currentPage,
+        limit: pageLimit,
+        filter: filterOption,
+        sort_by: sortBy,
+        sort_order: sortOrder,
+      }
+      
+      if (debouncedSearch) {
+        params.search = debouncedSearch
+      }
+      
+      const response = await adminAPI.getUsers(params)
       
       setUsers(response.users || [])
-      
-      // Calculate stats
-      const totalUsers = response.users?.length || 0
-      const pendingVerification = response.users?.filter(u => u.verification_status === 'pending' && u.profile_completed).length || 0
-      const admins = response.users?.filter(u => u.is_admin).length || 0
-      const verifiedUsers = response.users?.filter(u => u.is_verified).length || 0
-      
-      setStats({
-        total_users: totalUsers,
-        pending_verification: pendingVerification,
-        admins: admins,
-        verified_users: verifiedUsers
+      setTotalCount(response.total || 0)
+      setTotalPages(response.total_pages || 1)
+      setStats(response.stats || {
+        total_users: 0,
+        pending_verification: 0,
+        admins: 0,
+        verified_users: 0
       })
 
-      // Auto-select all pending users with completed profiles by default
-      const pendingUserIds = response.users?.filter(u => u.verification_status === 'pending' && u.profile_completed).map(u => u.id) || []
-      setSelectedUserIds(new Set(pendingUserIds))
+      // Auto-select all pending users with completed profiles on current page
+      if (filterOption === 'pending') {
+        const pendingUserIds = response.users?.filter(u => u.verification_status === 'pending' && u.profile_completed).map(u => u.id) || []
+        setSelectedUserIds(new Set(pendingUserIds))
+      } else {
+        setSelectedUserIds(new Set())
+      }
     } catch (err) {
       setError('Failed to load users: ' + (err.response?.data?.error || err.message))
+      showToast('Failed to load users', 'error')
     } finally {
       setLoading(false)
     }
@@ -155,6 +195,47 @@ const AdminPanel = () => {
     }
   }
 
+  // Copy users to clipboard
+  const copyUsersToClipboard = async () => {
+    try {
+      const filterNames = {
+        all: 'All Users',
+        pending: 'Pending Approval',
+        profile_incomplete: 'Profile Incomplete',
+        approved: 'Approved Users',
+        rejected: 'Rejected Users',
+        admins: 'Administrators'
+      }
+      
+      const filterName = filterNames[filterOption] || 'Users'
+      const timestamp = new Date().toLocaleString()
+      
+      let clipboardText = `📋 User List - ${filterName} (${totalCount} users)\nGenerated: ${timestamp}\n\n`
+      
+      users.forEach((user, index) => {
+        const fullName = user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown User'
+        const status = user.is_admin ? 'Admin' : 
+                       user.verification_status === 'approved' ? 'Approved' :
+                       user.verification_status === 'pending' ? 'Pending' :
+                       user.verification_status === 'rejected' ? 'Rejected' : 'Unknown'
+        const joinedDate = new Date(user.created_at).toLocaleDateString()
+        
+        clipboardText += `${index + 1}. Name: ${fullName}\n`
+        clipboardText += `   Email: ${user.email}\n`
+        if (user.phone_number) {
+          clipboardText += `   Phone: ${user.phone_number}\n`
+        }
+        clipboardText += `   Status: ${status}\n`
+        clipboardText += `   Joined: ${joinedDate}\n\n`
+      })
+      
+      await navigator.clipboard.writeText(clipboardText)
+      showToast('User list copied to clipboard!')
+    } catch (err) {
+      showToast('Failed to copy to clipboard', 'error')
+    }
+  }
+
   const pendingUsers = users.filter(u => u.verification_status === 'pending' && u.profile_completed)
   const isAllPendingSelected = pendingUsers.length > 0 && pendingUsers.every(u => selectedUserIds.has(u.id))
 
@@ -162,7 +243,7 @@ const AdminPanel = () => {
     if (user?.is_admin) {
       fetchUsers()
     }
-  }, [user])
+  }, [user, currentPage, filterOption, sortBy, sortOrder, debouncedSearch])
 
   // Component for displaying user avatar
   const UserAvatar = ({ user, size = 'w-10 h-10' }) => {
@@ -452,6 +533,104 @@ const AdminPanel = () => {
               </div>
             </div>
 
+            {/* Filter Bar */}
+            <div className="mb-6 space-y-4">
+              <div className="flex flex-wrap gap-4 items-center">
+                {/* Filter Dropdown */}
+                <div className="flex-1 min-w-[200px]">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Filter</label>
+                  <select
+                    value={filterOption}
+                    onChange={(e) => {
+                      setFilterOption(e.target.value)
+                      setCurrentPage(1)
+                      setSelectedUserIds(new Set())
+                    }}
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-saffron-500"
+                  >
+                    <option value="all">All Users</option>
+                    <option value="pending">Pending Approval</option>
+                    <option value="profile_incomplete">Profile Incomplete</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                    <option value="admins">Admins Only</option>
+                  </select>
+                </div>
+
+                {/* Search Input */}
+                <div className="flex-1 min-w-[200px]">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Search</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search by name or email..."
+                      className="w-full px-3 py-2 pl-10 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-saffron-500"
+                    />
+                    <svg className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Sort Dropdown */}
+                <div className="flex-1 min-w-[200px]">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Sort By</label>
+                  <select
+                    value={`${sortBy}_${sortOrder}`}
+                    onChange={(e) => {
+                      const [by, order] = e.target.value.split('_')
+                      setSortBy(by)
+                      setSortOrder(order)
+                    }}
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-saffron-500"
+                  >
+                    <option value="full_name_asc">Name (A-Z)</option>
+                    <option value="full_name_desc">Name (Z-A)</option>
+                    <option value="email_asc">Email (A-Z)</option>
+                    <option value="email_desc">Email (Z-A)</option>
+                    <option value="created_at_desc">Newest First</option>
+                    <option value="created_at_asc">Oldest First</option>
+                  </select>
+                </div>
+
+                {/* Copy to Clipboard Button */}
+                <div className="flex items-end">
+                  <button
+                    onClick={copyUsersToClipboard}
+                    disabled={users.length === 0}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
+                    title="Copy user list to clipboard"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Copy
+                  </button>
+                </div>
+              </div>
+
+              {/* Results Count */}
+              <div className="flex justify-between items-center text-sm text-muted-foreground">
+                <span>
+                  Showing {users.length > 0 ? ((currentPage - 1) * pageLimit + 1) : 0} - {Math.min(currentPage * pageLimit, totalCount)} of {totalCount} users
+                </span>
+                {(searchQuery || filterOption !== 'all') && (
+                  <button
+                    onClick={() => {
+                      setSearchQuery('')
+                      setFilterOption('all')
+                      setCurrentPage(1)
+                    }}
+                    className="text-saffron-600 hover:text-saffron-700 font-medium"
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+            </div>
+
             {loading ? (
               <div className="text-center py-12">
                 <div className="inline-block w-8 h-8 border-4 border-saffron-200 border-t-saffron-600 rounded-full animate-spin"></div>
@@ -601,11 +780,117 @@ const AdminPanel = () => {
                   </tbody>
                 </table>
                 
-                {users.length === 0 && (
+                {users.length === 0 && !loading && (
                   <div className="text-center py-8 text-muted-foreground">
-                    No users found
+                    {searchQuery || filterOption !== 'all' ? (
+                      <div>
+                        <p className="text-lg mb-2">No users found matching your criteria</p>
+                        <button
+                          onClick={() => {
+                            setSearchQuery('')
+                            setFilterOption('all')
+                            setCurrentPage(1)
+                          }}
+                          className="text-saffron-600 hover:text-saffron-700 font-medium"
+                        >
+                          Clear filters and try again
+                        </button>
+                      </div>
+                    ) : (
+                      'No users found'
+                    )}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Pagination Controls */}
+            {!loading && users.length > 0 && totalPages > 1 && (
+              <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-sm text-muted-foreground">
+                  Page {currentPage} of {totalPages}
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  {/* Previous Button */}
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-2 border border-border rounded-lg hover:bg-accent/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Previous
+                  </button>
+
+                  {/* Page Numbers */}
+                  <div className="flex gap-1">
+                    {currentPage > 2 && (
+                      <>
+                        <button
+                          onClick={() => setCurrentPage(1)}
+                          className="px-3 py-2 border border-border rounded-lg hover:bg-accent/20 transition-colors"
+                        >
+                          1
+                        </button>
+                        {currentPage > 3 && <span className="px-2 py-2">...</span>}
+                      </>
+                    )}
+                    
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter(page => page >= currentPage - 1 && page <= currentPage + 1)
+                      .map(page => (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          className={`px-3 py-2 border rounded-lg transition-colors ${
+                            page === currentPage
+                              ? 'bg-saffron-600 text-white border-saffron-600'
+                              : 'border-border hover:bg-accent/20'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    
+                    {currentPage < totalPages - 1 && (
+                      <>
+                        {currentPage < totalPages - 2 && <span className="px-2 py-2">...</span>}
+                        <button
+                          onClick={() => setCurrentPage(totalPages)}
+                          className="px-3 py-2 border border-border rounded-lg hover:bg-accent/20 transition-colors"
+                        >
+                          {totalPages}
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Next Button */}
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-2 border border-border rounded-lg hover:bg-accent/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
+
+                {/* Jump to Page */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Go to:</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max={totalPages}
+                    value={currentPage}
+                    onChange={(e) => {
+                      const page = parseInt(e.target.value)
+                      if (page >= 1 && page <= totalPages) {
+                        setCurrentPage(page)
+                      }
+                    }}
+                    className="w-16 px-2 py-1 border border-border rounded-lg bg-background text-foreground text-center focus:outline-none focus:ring-2 focus:ring-saffron-500"
+                  />
+                </div>
               </div>
             )}
           </div>
@@ -785,6 +1070,26 @@ const AdminPanel = () => {
           </div>
         )}
       </div>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-4 right-4 z-50 animate-fade-in">
+          <div className={`px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 ${
+            toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+          }`}>
+            {toast.type === 'success' ? (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            )}
+            <span>{toast.message}</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
