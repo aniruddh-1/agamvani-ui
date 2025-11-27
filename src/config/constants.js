@@ -21,21 +21,27 @@ const isLocalDevelopment = () => {
 // API Configuration
 // Use production URL for mobile apps, allow override via env vars
 const getAPIBaseURL = () => {
+  let url;
   // First check environment variable (highest priority)
   if (import.meta.env.VITE_API_BASE_URL) {
-    return import.meta.env.VITE_API_BASE_URL;
+    url = import.meta.env.VITE_API_BASE_URL;
   }
   // Check for local development BEFORE checking mobile app
   // This allows testing mobile app features locally
-  if (isLocalDevelopment()) {
-    return 'http://localhost:8002';
+  else if (isLocalDevelopment()) {
+    url = 'http://localhost:8002';
   }
   // Use production URL for mobile apps (APK/AAB) when not local
-  if (isMobileApp()) {
-    return 'https://av.ramsabha.in';
+  else if (isMobileApp()) {
+    url = 'https://av.ramsabha.in';
   }
   // Default to production for deployed web app
-  return 'https://av.ramsabha.in';
+  else {
+    url = 'https://av.ramsabha.in';
+  }
+  
+  // Remove trailing slash to prevent double slashes in API calls
+  return url.replace(/\/$/, '');
 };
 
 export const API_BASE_URL = getAPIBaseURL();
