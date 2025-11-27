@@ -1,13 +1,25 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_ENDPOINTS } from '../../config/constants'
+import { useDropdownData } from '../../hooks/useDropdownData'
 import axios from 'axios'
 
 const AccountSettings = () => {
   const { user, fetchUser } = useAuth()
+  const { 
+    countries, 
+    states, 
+    genders, 
+    loading: dropdownLoading, 
+    error: dropdownError, 
+    fetchStates,
+    loadingStates 
+  } = useDropdownData()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [selectedCountry, setSelectedCountry] = useState('')
+  const [profileLoading, setProfileLoading] = useState(true)
   
   // Form state
   const [formData, setFormData] = useState({
@@ -24,24 +36,65 @@ const AccountSettings = () => {
     preferred_language: 'en'
   })
 
-  // Initialize form with user data
+  // Fetch full user profile data from API
   useEffect(() => {
-    if (user) {
-      setFormData({
-        first_name: user.first_name || '',
-        last_name: user.last_name || '',
-        phone_number: user.phone_number || '',
-        address: user.address || '',
-        city: user.city || '',
-        state: user.state || '',
-        country: user.country || '',
-        postal_code: user.postal_code || '',
-        date_of_birth: user.date_of_birth ? 
-          new Date(user.date_of_birth).toISOString().split('T')[0] : '',
-        gender: user.gender || '',
-        preferred_language: user.preferred_language || 'en'
-      })
+    const fetchUserProfile = async () => {
+      try {
+        setProfileLoading(true)
+        const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8002'
+        
+        const response = await axios.get(
+          `${apiUrl}/auth/profile`,
+          { withCredentials: true }
+        )
+        
+        const profileData = response.data
+        const selectedCountryCode = profileData.country || ''
+        setSelectedCountry(selectedCountryCode)
+        
+        // Split full_name into first and last name if they don't exist separately
+        let firstName = profileData.first_name || ''
+        let lastName = profileData.last_name || ''
+        
+        if (!firstName && !lastName && profileData.full_name) {
+          const nameParts = profileData.full_name.split(' ')
+          firstName = nameParts[0] || ''
+          lastName = nameParts.slice(1).join(' ') || ''
+        }
+        
+        const newFormData = {
+          first_name: firstName,
+          last_name: lastName,
+          phone_number: profileData.phone_number || '',
+          address: profileData.address || '',
+          city: profileData.city || '',
+          state: profileData.state || '',
+          country: selectedCountryCode,
+          postal_code: profileData.postal_code || '',
+          date_of_birth: profileData.date_of_birth ? 
+            new Date(profileData.date_of_birth).toISOString().split('T')[0] : '',
+          gender: profileData.gender || '',
+          preferred_language: profileData.preferred_language || 'en'
+        }
+        
+        setFormData(newFormData)
+
+        // Load states if country is selected
+        if (selectedCountryCode && selectedCountryCode.length === 2) {
+          fetchStates(selectedCountryCode)
+        }
+      } catch (err) {
+        console.error('Error fetching user profile:', err)
+        setError('Failed to load profile data')
+      } finally {
+        setProfileLoading(false)
+      }
     }
+
+    if (user) {
+      fetchUserProfile()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
   const handleInputChange = (e) => {
@@ -50,6 +103,18 @@ const AccountSettings = () => {
       ...prev,
       [name]: value
     }))
+
+    // Handle country change - fetch states for the new country
+    if (name === 'country') {
+      setSelectedCountry(value)
+      setFormData(prev => ({
+        ...prev,
+        state: '' // Reset state when country changes
+      }))
+      if (value && value.length === 2) {
+        fetchStates(value)
+      }
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -88,19 +153,25 @@ const AccountSettings = () => {
     }
   }
 
-  const genderOptions = [
-    { value: '', label: 'Select Gender' },
-    { value: 'male', label: 'Male' },
-    { value: 'female', label: 'Female' },
-    { value: 'non_binary', label: 'Non-Binary' },
-    { value: 'prefer_not_to_say', label: 'Prefer not to say' }
-  ]
-
   const languageOptions = [
     { value: 'en', label: 'English' },
     { value: 'hi', label: 'Hindi' },
     { value: 'sa', label: 'Sanskrit' }
   ]
+
+  // Show loading screen while profile data is being fetched
+  if (profileLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 flex items-center justify-center p-4">
+        <div className="max-w-md w-full space-y-8 spiritual-card p-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-saffron-600 mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading your profile...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 flex items-center justify-center p-4">
@@ -130,6 +201,12 @@ const AccountSettings = () => {
             </div>
           )}
 
+          {dropdownError && (
+            <div className="mb-6 bg-amber-100 border border-amber-300 rounded-lg p-3 text-amber-700 text-sm">
+              {dropdownError} (Using offline data)
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Personal Information Section */}
             <div>
@@ -148,7 +225,7 @@ const AccountSettings = () => {
                     name="first_name"
                     value={formData.first_name}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-saffron-500"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-saffron-500"
                     placeholder="Enter first name"
                     disabled={loading}
                   />
@@ -161,7 +238,7 @@ const AccountSettings = () => {
                     name="last_name"
                     value={formData.last_name}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-saffron-500"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-saffron-500"
                     placeholder="Enter last name"
                     disabled={loading}
                   />
@@ -174,7 +251,7 @@ const AccountSettings = () => {
                     name="date_of_birth"
                     value={formData.date_of_birth}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-saffron-500"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-saffron-500"
                     disabled={loading}
                   />
                 </div>
@@ -185,11 +262,14 @@ const AccountSettings = () => {
                     name="gender"
                     value={formData.gender}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-saffron-500"
-                    disabled={loading}
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-saffron-500"
+                    disabled={loading || dropdownLoading}
                   >
-                    {genderOptions.map(option => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
+                    <option value="">Select gender</option>
+                    {genders.map((gender) => (
+                      <option key={gender.code} value={gender.code}>
+                        {gender.name}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -213,7 +293,7 @@ const AccountSettings = () => {
                     name="phone_number"
                     value={formData.phone_number}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-saffron-500"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-saffron-500"
                     placeholder="Enter phone number"
                     disabled={loading}
                   />
@@ -225,7 +305,7 @@ const AccountSettings = () => {
                     name="preferred_language"
                     value={formData.preferred_language}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-saffron-500"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-saffron-500"
                     disabled={loading}
                   >
                     {languageOptions.map(option => (
@@ -254,7 +334,7 @@ const AccountSettings = () => {
                     value={formData.address}
                     onChange={handleInputChange}
                     rows={2}
-                    className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-saffron-500"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-saffron-500"
                     placeholder="Enter your address"
                     disabled={loading}
                   />
@@ -268,36 +348,51 @@ const AccountSettings = () => {
                       name="city"
                       value={formData.city}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-saffron-500"
+                      className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-saffron-500"
                       placeholder="Enter city"
                       disabled={loading}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-1">State</label>
-                    <input
-                      type="text"
+                    <label className="block text-sm font-medium mb-1">
+                      State/Province
+                      {loadingStates && <span className="ml-2 text-xs text-muted-foreground">(Loading...)</span>}
+                    </label>
+                    <select
                       name="state"
                       value={formData.state}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-saffron-500"
-                      placeholder="Enter state"
-                      disabled={loading}
-                    />
+                      disabled={!selectedCountry || loading || loadingStates}
+                      className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-saffron-500 disabled:bg-gray-100"
+                    >
+                      <option value="">
+                        {!selectedCountry ? 'Select country first' : 'Select state/province'}
+                      </option>
+                      {states.map((state) => (
+                        <option key={state.code} value={state.name}>
+                          {state.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium mb-1">Country</label>
-                    <input
-                      type="text"
+                    <select
                       name="country"
                       value={formData.country}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-saffron-500"
-                      placeholder="Enter country"
-                      disabled={loading}
-                    />
+                      className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-saffron-500"
+                      disabled={loading || dropdownLoading}
+                    >
+                      <option value="">Select country</option>
+                      {countries.map((country) => (
+                        <option key={country.code} value={country.code}>
+                          {country.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
@@ -308,7 +403,7 @@ const AccountSettings = () => {
                     name="postal_code"
                     value={formData.postal_code}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-saffron-500"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-saffron-500"
                     placeholder="Enter postal code"
                     disabled={loading}
                   />
