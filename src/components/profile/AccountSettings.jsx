@@ -41,7 +41,8 @@ const AccountSettings = () => {
     const fetchUserProfile = async () => {
       try {
         setProfileLoading(true)
-        const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8002'
+        // Remove trailing slash from API URL to prevent double slashes
+        const apiUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8002').replace(/\/$/, '')
         
         const response = await axios.get(
           `${apiUrl}/auth/profile`,
@@ -124,7 +125,8 @@ const AccountSettings = () => {
     setLoading(true)
 
     try {
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8002'
+      // Remove trailing slash from API URL to prevent double slashes
+      const apiUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8002').replace(/\/$/, '')
       
       // Filter out empty values
       const updateData = {}
