@@ -133,18 +133,18 @@ export const VALIDATION = {
   EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
 };
 
-// Log configuration to console for debugging
-if (isLocalDevelopment() || IS_DEVELOPMENT) {
-  console.log('📋 App Configuration:', {
-    hostname: window.location.hostname,
-    isLocalDevelopment: isLocalDevelopment(),
-    isMobileApp: isMobileApp(),
-    API_BASE_URL,
-    FRONTEND_URL,
-    NODE_ENV,
-    MODE: import.meta.env.MODE,
-  });
-}
+// Log configuration to console for debugging (disabled)
+// if (isLocalDevelopment() || IS_DEVELOPMENT) {
+//   console.log('📋 App Configuration:', {
+//     hostname: window.location.hostname,
+//     isLocalDevelopment: isLocalDevelopment(),
+//     isMobileApp: isMobileApp(),
+//     API_BASE_URL,
+//     FRONTEND_URL,
+//     NODE_ENV,
+//     MODE: import.meta.env.MODE,
+//   });
+// }
 
 export default {
   API_BASE_URL,
