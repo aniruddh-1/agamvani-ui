@@ -40,6 +40,8 @@ fi
 
 # Step 3: Build web app
 echo -e "${YELLOW}🔨 Step 3: Building web application...${NC}"
+# Set production API URL for mobile builds
+export VITE_API_BASE_URL=https://av.ramsabha.in
 npm run build
 echo -e "${GREEN}✅ Web build complete${NC}"
 echo ""

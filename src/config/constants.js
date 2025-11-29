@@ -22,26 +22,32 @@ const isLocalDevelopment = () => {
 // Use production URL for mobile apps, allow override via env vars
 const getAPIBaseURL = () => {
   let url;
-  // First check environment variable (highest priority)
-  if (import.meta.env.VITE_API_BASE_URL) {
-    url = import.meta.env.VITE_API_BASE_URL;
-  }
-  // Check for local development BEFORE checking mobile app
-  // This allows testing mobile app features locally
-  else if (isLocalDevelopment()) {
-    url = 'http://localhost:8002';
-  }
-  // Use production URL for mobile apps (APK/AAB) when not local
-  else if (isMobileApp()) {
-    url = 'https://av.ramsabha.in';
-  }
-  // Default to production for deployed web app
-  else {
-    url = 'https://av.ramsabha.in';
+  
+  // Priority 1: Check if in Vite dev mode (npm run dev)
+  // This ensures localhost works during development
+  if (import.meta.env.DEV && isLocalDevelopment()) {
+    return 'http://localhost:8002';
   }
   
-  // Remove trailing slash to prevent double slashes in API calls
-  return url.replace(/\/$/, '');
+  // Priority 2: Check environment variable (build-time override)
+  // This is used during production builds
+  if (import.meta.env.VITE_API_BASE_URL) {
+    url = import.meta.env.VITE_API_BASE_URL;
+    return url.replace(/\/$/, '');
+  }
+  
+  // Priority 3: Use production URL for mobile apps (APK/AAB)
+  if (isMobileApp()) {
+    return 'https://av.ramsabha.in';
+  }
+  
+  // Priority 4: Check for local development (web browser on localhost)
+  if (isLocalDevelopment()) {
+    return 'http://localhost:8002';
+  }
+  
+  // Priority 5: Default to production for deployed web app
+  return 'https://av.ramsabha.in';
 };
 
 export const API_BASE_URL = getAPIBaseURL();
@@ -50,14 +56,22 @@ export const STREAM_BASE_URL = import.meta.env.VITE_STREAM_URL || `${API_BASE_UR
 
 // Frontend Configuration
 const getFrontendURL = () => {
+  // Priority 1: Check if in Vite dev mode (npm run dev)
+  if (import.meta.env.DEV && isLocalDevelopment()) {
+    return 'http://localhost:3001';
+  }
+  
+  // Priority 2: Check environment variable (build-time override)
   if (import.meta.env.VITE_FRONTEND_URL) {
     return import.meta.env.VITE_FRONTEND_URL;
   }
-  // Use localhost for local development
+  
+  // Priority 3: Check for local development (web browser on localhost)
   if (isLocalDevelopment()) {
     return 'http://localhost:3001';
   }
-  // Use production URL for mobile apps and deployed web
+  
+  // Priority 4: Default to production for mobile apps and deployed web
   return 'https://av.ramsabha.in';
 };
 
@@ -139,18 +153,17 @@ export const VALIDATION = {
   EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
 };
 
-// Log configuration to console for debugging (disabled)
-// if (isLocalDevelopment() || IS_DEVELOPMENT) {
-//   console.log('📋 App Configuration:', {
-//     hostname: window.location.hostname,
-//     isLocalDevelopment: isLocalDevelopment(),
-//     isMobileApp: isMobileApp(),
-//     API_BASE_URL,
-//     FRONTEND_URL,
-//     NODE_ENV,
-//     MODE: import.meta.env.MODE,
-//   });
-// }
+// Log configuration to console for debugging
+console.log('📋 App Configuration:', {
+  hostname: window.location.hostname,
+  isLocalDevelopment: isLocalDevelopment(),
+  isMobileApp: isMobileApp(),
+  hasCapacitor: window.Capacitor !== undefined,
+  API_BASE_URL,
+  FRONTEND_URL,
+  NODE_ENV,
+  MODE: import.meta.env.MODE,
+});
 
 export default {
   API_BASE_URL,

@@ -127,8 +127,7 @@ const RegisterPage = () => {
       } else {
         // Use web OAuth flow
         console.log('🌐 Using web Google OAuth flow')
-        const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8002'
-        window.location.href = `${apiUrl}/auth/google`
+        window.location.href = `${API_BASE_URL}/auth/google`
       }
     } catch (err) {
       console.error('❌ Google Sign-In failed:', err)

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_ENDPOINTS } from '../../config/constants'
 import { useDropdownData } from '../../hooks/useDropdownData'
-import axios from 'axios'
+import { userAPI } from '../../lib/api'
 
 const AccountSettings = () => {
   const { user, fetchUser } = useAuth()
@@ -41,15 +41,8 @@ const AccountSettings = () => {
     const fetchUserProfile = async () => {
       try {
         setProfileLoading(true)
-        // Remove trailing slash from API URL to prevent double slashes
-        const apiUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8002').replace(/\/$/, '')
         
-        const response = await axios.get(
-          `${apiUrl}/auth/profile`,
-          { withCredentials: true }
-        )
-        
-        const profileData = response.data
+        const profileData = await userAPI.getAuthProfile()
         const selectedCountryCode = profileData.country || ''
         setSelectedCountry(selectedCountryCode)
         
@@ -125,9 +118,6 @@ const AccountSettings = () => {
     setLoading(true)
 
     try {
-      // Remove trailing slash from API URL to prevent double slashes
-      const apiUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8002').replace(/\/$/, '')
-      
       // Filter out empty values
       const updateData = {}
       Object.keys(formData).forEach(key => {
@@ -136,11 +126,7 @@ const AccountSettings = () => {
         }
       })
 
-      await axios.put(
-        `${apiUrl}/auth/profile`,
-        updateData,
-        { withCredentials: true }
-      )
+      await userAPI.updateAuthProfile(updateData)
 
       // Refresh user data
       await fetchUser()
