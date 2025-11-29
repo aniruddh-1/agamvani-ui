@@ -387,7 +387,7 @@ function RadioPlayer({ streamUrl }) {
       >
         <div className="text-center relative">
           <h3 className="text-white font-bold text-lg mb-1 drop-shadow-md flex items-center justify-center gap-2">
-            अगम देश की अणभै वाणी
+            अगम देश की अणभै वाणी (सुखोवाच)
             <ExternalLink className="w-5 h-5" />
           </h3>
           <p className="text-white/95 text-sm leading-relaxed drop-shadow">
