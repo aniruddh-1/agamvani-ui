@@ -190,6 +190,17 @@ export const userAPI = {
     const response = await apiClient.get('/api/users/profile');
     return response.data;
   },
+
+  // Auth profile endpoints (different from users profile)
+  getAuthProfile: async () => {
+    const response = await apiClient.get('/auth/profile');
+    return response.data;
+  },
+
+  updateAuthProfile: async (data) => {
+    const response = await apiClient.put('/auth/profile', data);
+    return response.data;
+  },
 };
 
 /**

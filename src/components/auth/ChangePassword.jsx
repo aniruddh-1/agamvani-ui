@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import { authAPI } from '../../lib/api'
 
 const ChangePassword = () => {
   const navigate = useNavigate()
@@ -75,16 +75,10 @@ const ChangePassword = () => {
     setLoading(true)
 
     try {
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8002'
-      
-      await axios.put(
-        `${apiUrl}/auth/change-password`,
-        {
-          current_password: formData.current_password,
-          new_password: formData.new_password
-        },
-        { withCredentials: true }
-      )
+      await authAPI.changePassword({
+        current_password: formData.current_password,
+        new_password: formData.new_password
+      })
 
       setSuccess('Password changed successfully!')
       setFormData({

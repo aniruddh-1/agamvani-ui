@@ -578,20 +578,22 @@ const AdminPanel = () => {
                 <div className="flex-1 min-w-[200px]">
                   <label className="block text-sm font-medium text-muted-foreground mb-1">Sort By</label>
                   <select
-                    value={`${sortBy}_${sortOrder}`}
+                    value={`${sortBy}:${sortOrder}`}
                     onChange={(e) => {
-                      const [by, order] = e.target.value.split('_')
+                      const lastColonIndex = e.target.value.lastIndexOf(':')
+                      const by = e.target.value.substring(0, lastColonIndex)
+                      const order = e.target.value.substring(lastColonIndex + 1)
                       setSortBy(by)
                       setSortOrder(order)
                     }}
                     className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-saffron-500"
                   >
-                    <option value="full_name_asc">Name (A-Z)</option>
-                    <option value="full_name_desc">Name (Z-A)</option>
-                    <option value="email_asc">Email (A-Z)</option>
-                    <option value="email_desc">Email (Z-A)</option>
-                    <option value="created_at_desc">Newest First</option>
-                    <option value="created_at_asc">Oldest First</option>
+                    <option value="full_name:asc">Name (A-Z)</option>
+                    <option value="full_name:desc">Name (Z-A)</option>
+                    <option value="email:asc">Email (A-Z)</option>
+                    <option value="email:desc">Email (Z-A)</option>
+                    <option value="created_at:desc">Newest First</option>
+                    <option value="created_at:asc">Oldest First</option>
                   </select>
                 </div>
 
