@@ -5,6 +5,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.pm.ServiceInfo;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -72,7 +73,11 @@ public class AudioPlaybackService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         // Start as foreground service immediately
-        startForeground(NOTIFICATION_ID, createNotification());
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(NOTIFICATION_ID, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+        } else {
+            startForeground(NOTIFICATION_ID, createNotification());
+        }
         
         if (intent != null) {
             String action = intent.getAction();
@@ -191,7 +196,7 @@ public class AudioPlaybackService extends Service {
         
         // Create pause/play action
         Intent pauseIntent = new Intent(this, AudioPlaybackService.class);
-        pauseIntent.setAction(player.isPlaying() ? "PAUSE" : "PLAY");
+        pauseIntent.setAction(player.isPlaying() ? "PAUSE_AUDIO" : "RESUME_AUDIO");
         PendingIntent pausePendingIntent = PendingIntent.getService(
             this, 
             0, 
@@ -262,7 +267,11 @@ public class AudioPlaybackService extends Service {
         // Use startForeground() instead of NotificationManager.notify() to ensure update
         // This is more reliable for updating foreground service notifications
         Notification notification = createNotification();
-        startForeground(NOTIFICATION_ID, notification);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+        } else {
+            startForeground(NOTIFICATION_ID, notification);
+        }
     }
     
     @Override
