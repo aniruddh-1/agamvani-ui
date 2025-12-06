@@ -25,6 +25,7 @@ import InviteButton from './components/admin/InviteButton'
 import FeedbackButton from './components/FeedbackButton'
 import PrivacyPolicy from './components/legal/PrivacyPage'
 import TermsOfService from './components/legal/TermsPage'
+import SatsangSchedule from './components/SatsangSchedule'
 
 // Loading component
 const LoadingSpinner = ({ message = 'Loading...' }) => (
@@ -39,81 +40,81 @@ const LoadingSpinner = ({ message = 'Loading...' }) => (
 // Protected Route Component
 const ProtectedRoute = ({ children, skipProfileCheck = false, skipVerificationCheck = false }) => {
   const { isAuthenticated, isLoading, user } = useAuth()
-  
+
   if (isLoading) {
     return <LoadingSpinner message="Authenticating..." />
   }
-  
+
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
   }
-  
+
   // Check if profile completion is required
   if (!skipProfileCheck && user && !user.profile_completed) {
     return <Navigate to="/complete-profile" replace />
   }
-  
+
   // Check verification status (only after profile is completed)
   if (!skipVerificationCheck && user && user.profile_completed) {
     // Admins are automatically approved once profile is completed
     if (user.is_admin) {
       return <>{children}</>
     }
-    
+
     // Users with invitation approval method
     if (user.approval_method === 'invitation') {
       return <>{children}</>
     }
-    
+
     // Users that are already verified
     if (user.is_verified) {
       return <>{children}</>
     }
-    
+
     // Regular users need approval
     if (user.verification_status !== 'approved') {
       return <Navigate to="/pending-verification" replace />
     }
   }
-  
+
   return <>{children}</>
 }
 
 // Public Route Component
 const PublicRoute = ({ children, allowWhenIncomplete = false }) => {
   const { isAuthenticated, isLoading, user } = useAuth()
-  
+
   if (isLoading) {
     return <LoadingSpinner />
   }
-  
+
   // Only redirect if user is actually authenticated
   if (isAuthenticated && user) {
     if (user.profile_completed) {
       if (user.is_admin) {
         return <Navigate to="/" replace />
       }
-      
+
       if (user.approval_method === 'invitation') {
         return <Navigate to="/" replace />
       }
-      
+
       if (user.is_verified) {
         return <Navigate to="/" replace />
       }
-      
+
       if (user.verification_status === 'approved') {
         return <Navigate to="/" replace />
       } else {
         return <Navigate to="/pending-verification" replace />
       }
     }
-    
+
     if (!user.profile_completed && !allowWhenIncomplete) {
       return <Navigate to="/complete-profile" replace />
     }
   }
-  
+
   return <>{children}</>
 }
 
@@ -124,7 +125,7 @@ const RadioPage = () => {
   const [error, setError] = useState(null)
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  
+
   // Zoom functionality
   const [pageScale, setPageScale] = useState(1)
   const [pagePosition, setPagePosition] = useState({ x: 0, y: 0 })
@@ -138,7 +139,7 @@ const RadioPage = () => {
   const initializeRadio = async () => {
     try {
       setLoading(true)
-      
+
       // Get live radio stream
       const liveResponse = await fetch(API_ENDPOINTS.RADIO_LIVE)
       if (!liveResponse.ok) {
@@ -155,7 +156,7 @@ const RadioPage = () => {
   }
 
   const [showProfileMenu, setShowProfileMenu] = useState(false)
-  
+
   // Close profile menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -163,13 +164,13 @@ const RadioPage = () => {
         setShowProfileMenu(false)
       }
     }
-    
+
     if (showProfileMenu) {
       document.addEventListener('mousedown', handleClickOutside)
       return () => document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [showProfileMenu])
-  
+
   const handleLogout = async () => {
     try {
       await logout()
@@ -177,7 +178,7 @@ const RadioPage = () => {
       console.error('Logout error:', err)
     }
   }
-  
+
   // Pinch-to-zoom handlers
   const getDistance = (touch1, touch2) => {
     const dx = touch1.clientX - touch2.clientX
@@ -212,7 +213,7 @@ const RadioPage = () => {
       const scale = (distance / touchStartRef.distance) * touchStartRef.scale
       const clampedScale = Math.max(1, Math.min(4, scale)) // Limit zoom between 1x and 4x
       setPageScale(clampedScale)
-      
+
       // Reset position when zooming out to 1x
       if (clampedScale === 1) {
         setPagePosition({ x: 0, y: 0 })
@@ -235,10 +236,10 @@ const RadioPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 p-6">
       {/* Admin Invite Button - Fixed, not zoomable */}
       {user?.is_admin && <InviteButton />}
-      
+
       {/* Feedback Button - Fixed, available to all authenticated users */}
       <FeedbackButton />
-      
+
       {/* Zoomable content wrapper */}
       <div
         onTouchStart={handleTouchStart}
@@ -250,14 +251,14 @@ const RadioPage = () => {
           transition: isDragging ? 'none' : 'transform 0.1s ease-out',
         }}
       >
-      {/* User Info Header with Profile Menu - Top Right */}
-      <div className="absolute top-4 right-4 z-50">
-        <div className="spiritual-card p-4 flex items-center gap-4">
-          <div className="text-sm">
-            <p className="font-medium text-foreground">{user?.full_name || user?.email}</p>
-            <p className="text-xs text-muted-foreground">{user?.is_admin ? 'admin' : 'user'}</p>
-          </div>
-          <div className="relative profile-menu-container">
+        {/* User Info Header with Profile Menu - Top Right */}
+        <div className="absolute top-4 right-4 z-50">
+          <div className="spiritual-card p-4 flex items-center gap-4">
+            <div className="text-sm">
+              <p className="font-medium text-foreground">{user?.full_name || user?.email}</p>
+              <p className="text-xs text-muted-foreground">{user?.is_admin ? 'admin' : 'user'}</p>
+            </div>
+            <div className="relative profile-menu-container">
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 className="flex items-center gap-2 px-3 py-2 text-sm bg-saffron-600/10 text-saffron-600 hover:bg-saffron-600/20 rounded-lg transition-colors"
@@ -270,7 +271,7 @@ const RadioPage = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
-              
+
               {/* Profile Dropdown Menu */}
               {showProfileMenu && (
                 <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-[100] overflow-hidden">
@@ -279,8 +280,8 @@ const RadioPage = () => {
                       <p className="text-sm font-medium text-gray-900">{user?.full_name || 'User'}</p>
                       <p className="text-xs text-gray-600">{user?.email}</p>
                     </div>
-                    
-                    
+
+
                     <button
                       onClick={() => {
                         setShowProfileMenu(false)
@@ -294,7 +295,7 @@ const RadioPage = () => {
                       </svg>
                       Account Settings
                     </button>
-                    
+
                     <button
                       onClick={() => {
                         setShowProfileMenu(false)
@@ -307,7 +308,7 @@ const RadioPage = () => {
                       </svg>
                       Change Password
                     </button>
-                    
+
                     {user?.is_admin && (
                       <button
                         onClick={() => {
@@ -322,7 +323,7 @@ const RadioPage = () => {
                         Admin Panel
                       </button>
                     )}
-                    
+
                     <div className="border-t border-gray-200 mt-2 pt-2">
                       <button
                         onClick={() => {
@@ -340,86 +341,89 @@ const RadioPage = () => {
                   </div>
                 </div>
               )}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Two Column Layout */}
-      <div className="max-w-7xl mx-auto pt-28">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-          {/* Left Column - Logo and Description */}
-          <div className="space-y-6">
-            <div className="spiritual-card p-8">
-              {/* Centered Logo */}
-              <div className="flex flex-col items-center mb-8">
-                <img 
-                  src="/logo.png" 
-                  alt="Agamvani Logo" 
-                  className="w-64 h-64 object-contain filter drop-shadow-lg mb-4"
-                />
-                <h1 className="text-4xl font-bold text-foreground">अगम वाणी</h1>
-              </div>
-              
-              {/* Description */}
-              <div className="space-y-6">
-                <p className="text-base text-foreground leading-relaxed text-center">
-                  आदि सत्तगुरु, सर्व आत्माओं के सत्तगुरु, सर्व सृष्टि के सत्तगुरु, सत्तगुरु सुखरामजी महाराज की अणभै वाणी से उनके अनुयायियों द्वारा गायन किए गए पद को श्रवण करने हेतु मंच
-                </p>
-                
-                {/* Google Play Store Badge */}
-                <div className="pt-4 border-t border-border text-center">
-                  <p className="text-xs text-muted-foreground mb-3">Download our mobile app</p>
-                  <a
-                    href="https://play.google.com/store/apps/details?id=in.ramsabha.agamvani"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block transition-transform hover:scale-105"
-                  >
-                    <img
-                      src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png"
-                      alt="Get it on Google Play"
-                      className="h-14 mx-auto"
-                    />
-                  </a>
+        {/* Two Column Layout */}
+        <div className="max-w-7xl mx-auto pt-28">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            {/* Left Column - Logo and Description */}
+            <div className="space-y-6">
+              <div className="spiritual-card p-8">
+                {/* Centered Logo */}
+                <div className="flex flex-col items-center mb-8">
+                  <img
+                    src="/logo.png"
+                    alt="Agamvani Logo"
+                    className="w-64 h-64 object-contain filter drop-shadow-lg mb-4"
+                  />
+                  <h1 className="text-4xl font-bold text-foreground">अगम वाणी</h1>
+                </div>
+
+                {/* Description */}
+                <div className="space-y-6">
+                  <p className="text-base text-foreground leading-relaxed text-center">
+                    आदि सत्तगुरु, सर्व आत्माओं के सत्तगुरु, सर्व सृष्टि के सत्तगुरु, सत्तगुरु सुखरामजी महाराज की अणभै वाणी से उनके अनुयायियों द्वारा गायन किए गए पद को श्रवण करने हेतु मंच
+                  </p>
+
+                  {/* Google Play Store Badge */}
+                  <div className="pt-4 border-t border-border text-center">
+                    <p className="text-xs text-muted-foreground mb-3">Download our mobile app</p>
+                    <a
+                      href="https://play.google.com/store/apps/details?id=in.ramsabha.agamvani"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block transition-transform hover:scale-105"
+                    >
+                      <img
+                        src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png"
+                        alt="Get it on Google Play"
+                        className="h-14 mx-auto"
+                      />
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
+
+            {/* Right Column - Radio Player */}
+            <div className="spiritual-card p-8">
+              {loading && (
+                <div className="text-center py-8">
+                  <div className="inline-block w-12 h-12 border-4 border-saffron-200 border-t-saffron-600 rounded-full animate-spin mb-4"></div>
+                  <p className="text-muted-foreground">Loading radio stream...</p>
+                </div>
+              )}
+
+              {error && (
+                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-4">
+                  <p className="text-destructive text-sm mb-3">Error: {error}</p>
+                  <button
+                    onClick={initializeRadio}
+                    className="px-4 py-2 bg-saffron-600 text-white rounded-lg hover:bg-saffron-700 transition-colors font-medium"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {!loading && !error && !liveStream && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p className="mb-2">No live stream available.</p>
+                  <p className="text-sm">Upload an audio file to get started.</p>
+                </div>
+              )}
+
+              {!loading && !error && liveStream && (
+                <RadioPlayer streamUrl={liveStream.stream_url} />
+              )}
+            </div>
           </div>
 
-          {/* Right Column - Radio Player */}
-          <div className="spiritual-card p-8">
-            {loading && (
-              <div className="text-center py-8">
-                <div className="inline-block w-12 h-12 border-4 border-saffron-200 border-t-saffron-600 rounded-full animate-spin mb-4"></div>
-                <p className="text-muted-foreground">Loading radio stream...</p>
-              </div>
-            )}
-            
-            {error && (
-              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-4">
-                <p className="text-destructive text-sm mb-3">Error: {error}</p>
-                <button 
-                  onClick={initializeRadio}
-                  className="px-4 py-2 bg-saffron-600 text-white rounded-lg hover:bg-saffron-700 transition-colors font-medium"
-                >
-                  Retry
-                </button>
-              </div>
-            )}
-
-            {!loading && !error && !liveStream && (
-              <div className="text-center py-8 text-muted-foreground">
-                <p className="mb-2">No live stream available.</p>
-                <p className="text-sm">Upload an audio file to get started.</p>
-              </div>
-            )}
-
-            {!loading && !error && liveStream && (
-              <RadioPlayer streamUrl={liveStream.stream_url} />
-            )}
-          </div>
+          {/* Online Programs Schedule */}
+          <SatsangSchedule />
         </div>
-      </div>
       </div>
     </div>
   )
@@ -482,7 +486,7 @@ function App() {
     }
 
     let handleBackButton;
-    
+
     const setupBackButtonListener = async () => {
       handleBackButton = await CapacitorApp.addListener('backButton', ({ canGoBack }) => {
         const currentPath = location.pathname;
@@ -505,7 +509,7 @@ function App() {
           // First tap - show toast message
           lastBackPressTime.current = currentTime;
           setShowExitToast(true);
-          
+
           // Hide toast after 2 seconds
           setTimeout(() => {
             setShowExitToast(false);
@@ -526,148 +530,148 @@ function App() {
 
   return (
     <RadioCacheProvider>
-    <Routes>
-      {/* Authentication Routes */}
-      <Route 
-        path="/login" 
-        element={
-          <PublicRoute allowWhenIncomplete={true}>
-            <LoginPage />
-          </PublicRoute>
-        } 
-      />
-      
-      <Route 
-        path="/register" 
-        element={
-          <PublicRoute allowWhenIncomplete={true}>
-            <RegisterPage />
-          </PublicRoute>
-        } 
-      />
-      
-      <Route 
-        path="/register/invite/:token" 
-        element={
-          <PublicRoute allowWhenIncomplete={true}>
-            <InviteRegistrationPage />
-          </PublicRoute>
-        } 
-      />
-      
-      <Route 
-        path="/auth/register/invite" 
-        element={
-          <PublicRoute allowWhenIncomplete={true}>
-            <InviteRegistrationPage />
-          </PublicRoute>
-        } 
-      />
-      
-      <Route 
-        path="/forgot-password"
-        element={
-          <PublicRoute allowWhenIncomplete={true}>
-            <ForgotPasswordPage />
-          </PublicRoute>
-        } 
-      />
-      
-      <Route 
-        path="/reset-password" 
-        element={
-          <PublicRoute allowWhenIncomplete={true}>
-            <ResetPasswordPage />
-          </PublicRoute>
-        } 
-      />
-      
-      {/* Profile completion route */}
-      <Route 
-        path="/complete-profile" 
-        element={
-          <ProtectedRoute skipProfileCheck={true} skipVerificationCheck={true}>
-            <ProfileCompletion />
-          </ProtectedRoute>
-        } 
-      />
-      
-      {/* Pending verification route */}
-      <Route 
-        path="/pending-verification" 
-        element={
-          <ProtectedRoute skipVerificationCheck={true}>
-            <PendingVerification />
-          </ProtectedRoute>
-        } 
-      />
-      
-      {/* Profile routes */}
-      
-      <Route 
-        path="/profile/delete" 
-        element={
-          <ProtectedRoute>
-            <DeleteAccount />
-          </ProtectedRoute>
-        } 
-      />
-      
-      <Route 
-        path="/settings" 
-        element={
-          <ProtectedRoute skipVerificationCheck={true}>
-            <AccountSettings />
-          </ProtectedRoute>
-        } 
-      />
-      
-      <Route 
-        path="/change-password" 
-        element={
-          <ProtectedRoute>
-            <ChangePassword />
-          </ProtectedRoute>
-        } 
-      />
-      
-      <Route 
-        path="/admin" 
-        element={
-          <ProtectedRoute>
-            <AdminPanel />
-          </ProtectedRoute>
-        } 
-      />
-      
-      {/* OAuth callback routes */}
-      <Route path="/auth/success" element={<AuthSuccess />} />
-      <Route path="/auth/error" element={<AuthError />} />
-      
-      {/* Legal pages - publicly accessible */}
-      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-      <Route path="/terms-of-service" element={<TermsOfService />} />
-      
-      {/* Main Radio Route (Protected) */}
-      <Route 
-        path="/" 
-        element={
-          <ProtectedRoute>
-            <RadioPage />
-          </ProtectedRoute>
-        } 
-      />
-      
-      {/* Catch-all redirect */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      <Routes>
+        {/* Authentication Routes */}
+        <Route
+          path="/login"
+          element={
+            <PublicRoute allowWhenIncomplete={true}>
+              <LoginPage />
+            </PublicRoute>
+          }
+        />
 
-    {/* Exit app toast message */}
-    {showExitToast && (
-      <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 px-4 py-3 bg-gray-800 text-white rounded-lg shadow-lg animate-pulse">
-        <p className="text-sm font-medium">Press back again to exit</p>
-      </div>
-    )}
+        <Route
+          path="/register"
+          element={
+            <PublicRoute allowWhenIncomplete={true}>
+              <RegisterPage />
+            </PublicRoute>
+          }
+        />
+
+        <Route
+          path="/register/invite/:token"
+          element={
+            <PublicRoute allowWhenIncomplete={true}>
+              <InviteRegistrationPage />
+            </PublicRoute>
+          }
+        />
+
+        <Route
+          path="/auth/register/invite"
+          element={
+            <PublicRoute allowWhenIncomplete={true}>
+              <InviteRegistrationPage />
+            </PublicRoute>
+          }
+        />
+
+        <Route
+          path="/forgot-password"
+          element={
+            <PublicRoute allowWhenIncomplete={true}>
+              <ForgotPasswordPage />
+            </PublicRoute>
+          }
+        />
+
+        <Route
+          path="/reset-password"
+          element={
+            <PublicRoute allowWhenIncomplete={true}>
+              <ResetPasswordPage />
+            </PublicRoute>
+          }
+        />
+
+        {/* Profile completion route */}
+        <Route
+          path="/complete-profile"
+          element={
+            <ProtectedRoute skipProfileCheck={true} skipVerificationCheck={true}>
+              <ProfileCompletion />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Pending verification route */}
+        <Route
+          path="/pending-verification"
+          element={
+            <ProtectedRoute skipVerificationCheck={true}>
+              <PendingVerification />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Profile routes */}
+
+        <Route
+          path="/profile/delete"
+          element={
+            <ProtectedRoute>
+              <DeleteAccount />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute skipVerificationCheck={true}>
+              <AccountSettings />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/change-password"
+          element={
+            <ProtectedRoute>
+              <ChangePassword />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <AdminPanel />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* OAuth callback routes */}
+        <Route path="/auth/success" element={<AuthSuccess />} />
+        <Route path="/auth/error" element={<AuthError />} />
+
+        {/* Legal pages - publicly accessible */}
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms-of-service" element={<TermsOfService />} />
+
+        {/* Main Radio Route (Protected) */}
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <RadioPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Catch-all redirect */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+
+      {/* Exit app toast message */}
+      {showExitToast && (
+        <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 px-4 py-3 bg-gray-800 text-white rounded-lg shadow-lg animate-pulse">
+          <p className="text-sm font-medium">Press back again to exit</p>
+        </div>
+      )}
     </RadioCacheProvider>
   )
 }
