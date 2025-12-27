@@ -9,6 +9,7 @@ axios.defaults.timeout = 30000;
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
+  timeout: 60000, // 60 seconds for email operations
   headers: {
     'Content-Type': 'application/json',
   },
