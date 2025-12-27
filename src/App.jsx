@@ -26,6 +26,7 @@ import FeedbackButton from './components/FeedbackButton'
 import PrivacyPolicy from './components/legal/PrivacyPage'
 import TermsOfService from './components/legal/TermsPage'
 import SatsangSchedule from './components/SatsangSchedule'
+import AuditionModal from './components/modals/AuditionModal'
 
 // Loading component
 const LoadingSpinner = ({ message = 'Loading...' }) => (
@@ -156,6 +157,7 @@ const RadioPage = () => {
   }
 
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [showAuditionModal, setShowAuditionModal] = useState(false)
 
   // Close profile menu when clicking outside
   useEffect(() => {
@@ -309,19 +311,17 @@ const RadioPage = () => {
                       Change Password
                     </button>
 
-                    {user?.approver_form_link && (
-                      <a
-                        href={user.approver_form_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => setShowProfileMenu(false)}
+                    {user?.audition_links && (
+                      <button
+                        onClick={() => {
+                          setShowProfileMenu(false)
+                          setShowAuditionModal(true)
+                        }}
                         className="w-full px-4 py-2 text-left text-sm text-emerald-600 hover:bg-emerald-50 transition-colors flex items-center gap-2 font-medium"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        Approver Form
-                      </a>
+                        <span className="text-lg">🎵</span>
+                        Audition
+                      </button>
                     )}
 
                     {user?.is_admin && (
@@ -440,6 +440,14 @@ const RadioPage = () => {
           <SatsangSchedule />
         </div>
       </div>
+
+      {/* Audition Modal */}
+      {showAuditionModal && user?.audition_links && (
+        <AuditionModal
+          auditionLinks={user.audition_links}
+          onClose={() => setShowAuditionModal(false)}
+        />
+      )}
     </div>
   )
 }
