@@ -377,8 +377,8 @@ const AdminPanel = () => {
               <button
                 onClick={() => setSelectedTab('overview')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${selectedTab === 'overview'
-                    ? 'border-saffron-500 text-saffron-600'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                  ? 'border-saffron-500 text-saffron-600'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
                   }`}
               >
                 Overview
@@ -386,8 +386,8 @@ const AdminPanel = () => {
               <button
                 onClick={() => setSelectedTab('users')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${selectedTab === 'users'
-                    ? 'border-saffron-500 text-saffron-600'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                  ? 'border-saffron-500 text-saffron-600'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
                   }`}
               >
                 User Management
@@ -395,8 +395,8 @@ const AdminPanel = () => {
               <button
                 onClick={() => setSelectedTab('feedback')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${selectedTab === 'feedback'
-                    ? 'border-saffron-500 text-saffron-600'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                  ? 'border-saffron-500 text-saffron-600'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
                   }`}
               >
                 Feedback
@@ -522,7 +522,11 @@ const AdminPanel = () => {
                 <button
                   onClick={fetchUsers}
                   disabled={loading}
-                  className="px-4 py-2 bg-saffron-600 hover:bg-saffron-700 disabled:opacity-50 text-white rounded-lg transition-colors"
+                  className="px-4 py-2 text-white rounded-lg transition-colors font-medium"
+                  style={{
+                    backgroundColor: loading ? '#9CA3AF' : '#EA580C',
+                    cursor: loading ? 'not-allowed' : 'pointer'
+                  }}
                 >
                   {loading ? 'Loading...' : 'Refresh'}
                 </button>
@@ -840,8 +844,8 @@ const AdminPanel = () => {
                           key={page}
                           onClick={() => setCurrentPage(page)}
                           className={`px-3 py-2 border rounded-lg transition-colors ${page === currentPage
-                              ? 'bg-saffron-600 text-white border-saffron-600'
-                              : 'border-border hover:bg-accent/20'
+                            ? 'bg-saffron-600 text-white border-saffron-600'
+                            : 'border-border hover:bg-accent/20'
                             }`}
                         >
                           {page}
@@ -984,8 +988,8 @@ const AdminPanel = () => {
                           <div>
                             <span className="font-medium">Approval Method:</span>{' '}
                             <span className={`px-2 py-1 rounded ${selectedUser.approval_method === 'invitation'
-                                ? 'bg-purple-100 text-purple-800'
-                                : 'bg-blue-100 text-blue-800'
+                              ? 'bg-purple-100 text-purple-800'
+                              : 'bg-blue-100 text-blue-800'
                               }`}>
                               {selectedUser.approval_method === 'invitation' ? 'Via Invitation' : 'Admin Dashboard'}
                             </span>
