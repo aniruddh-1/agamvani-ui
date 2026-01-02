@@ -20,7 +20,7 @@ const AdminPanel = () => {
   const [selectedUser, setSelectedUser] = useState(null)
   const [selectedUserIds, setSelectedUserIds] = useState(new Set())
   const [bulkApproving, setBulkApproving] = useState(false)
-  
+
   // Pagination, filtering, sorting states
   const [currentPage, setCurrentPage] = useState(1)
   const [pageLimit] = useState(50)
@@ -59,7 +59,7 @@ const AdminPanel = () => {
     try {
       setLoading(true)
       setError('')
-      
+
       const params = {
         page: currentPage,
         limit: pageLimit,
@@ -67,13 +67,13 @@ const AdminPanel = () => {
         sort_by: sortBy,
         sort_order: sortOrder,
       }
-      
+
       if (debouncedSearch) {
         params.search = debouncedSearch
       }
-      
+
       const response = await adminAPI.getUsers(params)
-      
+
       setUsers(response.users || [])
       setTotalCount(response.total || 0)
       setTotalPages(response.total_pages || 1)
@@ -102,7 +102,7 @@ const AdminPanel = () => {
   const updateUserStatus = async (userId, updates) => {
     try {
       await adminAPI.updateUser(userId, updates)
-      
+
       // Refresh users list
       await fetchUsers()
     } catch (err) {
@@ -113,7 +113,7 @@ const AdminPanel = () => {
   const approveUser = async (userId) => {
     try {
       await adminAPI.approveUser(userId)
-      
+
       // Refresh users list
       await fetchUsers()
     } catch (err) {
@@ -125,10 +125,10 @@ const AdminPanel = () => {
     if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
       return
     }
-    
+
     try {
       await adminAPI.deleteUser(userId)
-      
+
       // Refresh users list
       await fetchUsers()
     } catch (err) {
@@ -157,7 +157,7 @@ const AdminPanel = () => {
 
   const bulkApproveUsers = async () => {
     const selectedCount = selectedUserIds.size
-    
+
     if (selectedCount === 0) {
       setError('No users selected for approval')
       return
@@ -165,7 +165,7 @@ const AdminPanel = () => {
 
     const selectedUsers = users.filter(u => selectedUserIds.has(u.id))
     const usersList = selectedUsers.map(u => `- ${u.email} (${u.full_name || u.first_name + ' ' + u.last_name || 'Unknown'})`).join('\n')
-    
+
     if (!confirm(`Are you sure you want to approve ${selectedCount} user${selectedCount > 1 ? 's' : ''}?\n\n${usersList}`)) {
       return
     }
@@ -173,19 +173,19 @@ const AdminPanel = () => {
     try {
       setBulkApproving(true)
       setError('')
-      
+
       const userIdsArray = Array.from(selectedUserIds)
       const response = await adminAPI.bulkApproveUsers(userIdsArray)
-      
+
       // Show success message
       if (response.failed_count > 0) {
         setError(`Approved ${response.approved_count} users. ${response.failed_count} failed.`)
       } else {
         setError('')
       }
-      
+
       alert(response.message)
-      
+
       // Refresh users list
       await fetchUsers()
     } catch (err) {
@@ -206,20 +206,20 @@ const AdminPanel = () => {
         rejected: 'Rejected Users',
         admins: 'Administrators'
       }
-      
+
       const filterName = filterNames[filterOption] || 'Users'
       const timestamp = new Date().toLocaleString()
-      
+
       let clipboardText = `📋 User List - ${filterName} (${totalCount} users)\nGenerated: ${timestamp}\n\n`
-      
+
       users.forEach((user, index) => {
         const fullName = user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown User'
-        const status = user.is_admin ? 'Admin' : 
-                       user.verification_status === 'approved' ? 'Approved' :
-                       user.verification_status === 'pending' ? 'Pending' :
-                       user.verification_status === 'rejected' ? 'Rejected' : 'Unknown'
+        const status = user.is_admin ? 'Admin' :
+          user.verification_status === 'approved' ? 'Approved' :
+            user.verification_status === 'pending' ? 'Pending' :
+              user.verification_status === 'rejected' ? 'Rejected' : 'Unknown'
         const joinedDate = new Date(user.created_at).toLocaleDateString()
-        
+
         clipboardText += `${index + 1}. Name: ${fullName}\n`
         clipboardText += `   Email: ${user.email}\n`
         if (user.phone_number) {
@@ -228,7 +228,7 @@ const AdminPanel = () => {
         clipboardText += `   Status: ${status}\n`
         clipboardText += `   Joined: ${joinedDate}\n\n`
       })
-      
+
       await navigator.clipboard.writeText(clipboardText)
       showToast('User list copied to clipboard!')
     } catch (err) {
@@ -249,11 +249,11 @@ const AdminPanel = () => {
   const UserAvatar = ({ user, size = 'w-10 h-10' }) => {
     const [imageError, setImageError] = useState(false)
     const [imageLoaded, setImageLoaded] = useState(false)
-    
+
     // Check if user has a valid profile picture URL
     const hasValidUrl = user?.profile_picture_url && user.profile_picture_url.trim() !== ''
     const hasProfilePicture = hasValidUrl && !imageError
-    
+
     // Get user initials for fallback avatar
     const getUserInitials = () => {
       if (user.first_name && user.last_name) {
@@ -271,18 +271,17 @@ const AdminPanel = () => {
       }
       return '?'
     }
-    
+
     const initials = getUserInitials()
-    
+
     return (
       <div className="relative inline-block">
         {hasProfilePicture && (
-          <img 
-            src={user.profile_picture_url} 
+          <img
+            src={user.profile_picture_url}
             alt={`${user.first_name || user.full_name || 'User'}'s profile`}
-            className={`${size} rounded-full object-cover border-2 border-saffron-200 ${
-              imageLoaded ? 'block' : 'hidden'
-            }`}
+            className={`${size} rounded-full object-cover border-2 border-saffron-200 ${imageLoaded ? 'block' : 'hidden'
+              }`}
             onLoad={() => {
               setImageLoaded(true)
               setImageError(false)
@@ -293,19 +292,19 @@ const AdminPanel = () => {
             }}
           />
         )}
-        
+
         {(!hasProfilePicture || !imageLoaded) && (
-          <div 
+          <div
             className={`${size} rounded-full flex items-center justify-center`}
             style={{
               backgroundColor: '#DC2626',
               color: '#FFFFFF',
               fontWeight: '900',
-              fontSize: size === 'w-10 h-10' ? '16px' : 
-                       size === 'w-12 h-12' ? '18px' : 
-                       size === 'w-14 h-14' ? '22px' : 
-                       size === 'w-16 h-16' ? '26px' :
-                       size === 'w-20 h-20' ? '32px' : '18px',
+              fontSize: size === 'w-10 h-10' ? '16px' :
+                size === 'w-12 h-12' ? '18px' :
+                  size === 'w-14 h-14' ? '22px' :
+                    size === 'w-16 h-16' ? '26px' :
+                      size === 'w-20 h-20' ? '32px' : '18px',
               letterSpacing: '1px',
               textTransform: 'uppercase',
               display: 'flex',
@@ -326,19 +325,19 @@ const AdminPanel = () => {
     if (user.is_admin) {
       return <span className="px-2 py-1 bg-saffron-100 text-saffron-800 text-xs rounded-full">Admin</span>
     }
-    
+
     if (user.verification_status === 'approved') {
       return <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Approved</span>
     }
-    
+
     if (user.verification_status === 'pending') {
       return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">Pending</span>
     }
-    
+
     if (user.verification_status === 'rejected') {
       return <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">Rejected</span>
     }
-    
+
     return <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">Unknown</span>
   }
 
@@ -377,31 +376,28 @@ const AdminPanel = () => {
             <nav className="-mb-px flex space-x-8">
               <button
                 onClick={() => setSelectedTab('overview')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  selectedTab === 'overview'
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${selectedTab === 'overview'
                     ? 'border-saffron-500 text-saffron-600'
                     : 'border-transparent text-muted-foreground hover:text-foreground'
-                }`}
+                  }`}
               >
                 Overview
               </button>
               <button
                 onClick={() => setSelectedTab('users')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  selectedTab === 'users'
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${selectedTab === 'users'
                     ? 'border-saffron-500 text-saffron-600'
                     : 'border-transparent text-muted-foreground hover:text-foreground'
-                }`}
+                  }`}
               >
                 User Management
               </button>
               <button
                 onClick={() => setSelectedTab('feedback')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  selectedTab === 'feedback'
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${selectedTab === 'feedback'
                     ? 'border-saffron-500 text-saffron-600'
                     : 'border-transparent text-muted-foreground hover:text-foreground'
-                }`}
+                  }`}
               >
                 Feedback
               </button>
@@ -565,7 +561,7 @@ const AdminPanel = () => {
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search by name or email..."
+                      placeholder="Search by name, email, or mobile..."
                       className="w-full px-3 py-2 pl-10 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-saffron-500"
                     />
                     <svg className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -719,7 +715,7 @@ const AdminPanel = () => {
                             >
                               View Details
                             </button>
-                            
+
                             {!userItem.is_admin && userItem.verification_status === 'pending' && userItem.profile_completed && (
                               <>
                                 <button
@@ -738,7 +734,7 @@ const AdminPanel = () => {
                                 </button>
                               </>
                             )}
-                            
+
                             {!userItem.is_admin && (
                               <button
                                 onClick={() => updateUserStatus(userItem.id, { is_admin: true })}
@@ -755,7 +751,7 @@ const AdminPanel = () => {
                                 Make Admin
                               </button>
                             )}
-                            
+
                             {userItem.is_admin && userItem.id !== user.id && (
                               <button
                                 onClick={() => updateUserStatus(userItem.id, { is_admin: false })}
@@ -765,7 +761,7 @@ const AdminPanel = () => {
                                 Remove Admin
                               </button>
                             )}
-                            
+
                             {userItem.id !== user.id && (
                               <button
                                 onClick={() => deleteUser(userItem.id)}
@@ -781,7 +777,7 @@ const AdminPanel = () => {
                     ))}
                   </tbody>
                 </table>
-                
+
                 {users.length === 0 && !loading && (
                   <div className="text-center py-8 text-muted-foreground">
                     {searchQuery || filterOption !== 'all' ? (
@@ -812,7 +808,7 @@ const AdminPanel = () => {
                 <div className="text-sm text-muted-foreground">
                   Page {currentPage} of {totalPages}
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                   {/* Previous Button */}
                   <button
@@ -836,23 +832,22 @@ const AdminPanel = () => {
                         {currentPage > 3 && <span className="px-2 py-2">...</span>}
                       </>
                     )}
-                    
+
                     {Array.from({ length: totalPages }, (_, i) => i + 1)
                       .filter(page => page >= currentPage - 1 && page <= currentPage + 1)
                       .map(page => (
                         <button
                           key={page}
                           onClick={() => setCurrentPage(page)}
-                          className={`px-3 py-2 border rounded-lg transition-colors ${
-                            page === currentPage
+                          className={`px-3 py-2 border rounded-lg transition-colors ${page === currentPage
                               ? 'bg-saffron-600 text-white border-saffron-600'
                               : 'border-border hover:bg-accent/20'
-                          }`}
+                            }`}
                         >
                           {page}
                         </button>
                       ))}
-                    
+
                     {currentPage < totalPages - 1 && (
                       <>
                         {currentPage < totalPages - 2 && <span className="px-2 py-2">...</span>}
@@ -897,7 +892,7 @@ const AdminPanel = () => {
             )}
           </div>
         )}
-        
+
         {/* User Details Modal */}
         {selectedUser && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -914,7 +909,7 @@ const AdminPanel = () => {
                     </svg>
                   </button>
                 </div>
-                
+
                 {/* User Header */}
                 <div className="flex items-center space-x-4 mb-6 p-4 bg-gray-50 rounded-lg">
                   <UserAvatar user={selectedUser} size="w-20 h-20" />
@@ -932,7 +927,7 @@ const AdminPanel = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Profile Information */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -945,7 +940,7 @@ const AdminPanel = () => {
                       )}
                     </div>
                   </div>
-                  
+
                   <div>
                     <h5 className="font-semibold text-foreground mb-3">Address</h5>
                     <div className="space-y-2 text-sm">
@@ -956,7 +951,7 @@ const AdminPanel = () => {
                       <div><span className="font-medium">Postal Code:</span> {selectedUser.postal_code || 'Not provided'}</div>
                     </div>
                   </div>
-                  
+
                   <div>
                     <h5 className="font-semibold text-foreground mb-3">Personal Information</h5>
                     <div className="space-y-2 text-sm">
@@ -967,7 +962,7 @@ const AdminPanel = () => {
                       <div><span className="font-medium">Language:</span> {selectedUser.preferred_language || 'Not provided'}</div>
                     </div>
                   </div>
-                  
+
                   <div>
                     <h5 className="font-semibold text-foreground mb-3">Account Status</h5>
                     <div className="space-y-2 text-sm">
@@ -980,7 +975,7 @@ const AdminPanel = () => {
                       )}
                     </div>
                   </div>
-                  
+
                   {(selectedUser.approval_method || selectedUser.invitation_created_by_email || selectedUser.approved_by_admin_email) && (
                     <div className="md:col-span-2">
                       <h5 className="font-semibold text-foreground mb-3">Approval Traceability</h5>
@@ -988,11 +983,10 @@ const AdminPanel = () => {
                         {selectedUser.approval_method && (
                           <div>
                             <span className="font-medium">Approval Method:</span>{' '}
-                            <span className={`px-2 py-1 rounded ${
-                              selectedUser.approval_method === 'invitation'
+                            <span className={`px-2 py-1 rounded ${selectedUser.approval_method === 'invitation'
                                 ? 'bg-purple-100 text-purple-800'
                                 : 'bg-blue-100 text-blue-800'
-                            }`}>
+                              }`}>
                               {selectedUser.approval_method === 'invitation' ? 'Via Invitation' : 'Admin Dashboard'}
                             </span>
                           </div>
@@ -1011,7 +1005,7 @@ const AdminPanel = () => {
                     </div>
                   )}
                 </div>
-                
+
                 {/* Action Buttons */}
                 <div className="flex justify-between items-center mt-6 pt-6 border-t">
                   <div>
@@ -1027,7 +1021,7 @@ const AdminPanel = () => {
                       </button>
                     )}
                   </div>
-                  
+
                   <div className="flex space-x-3">
                     {!selectedUser.is_admin && selectedUser.verification_status === 'pending' && selectedUser.profile_completed && (
                       <>
@@ -1051,7 +1045,7 @@ const AdminPanel = () => {
                         </button>
                       </>
                     )}
-                    
+
                     <button
                       onClick={() => setSelectedUser(null)}
                       className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition-colors"
@@ -1076,9 +1070,8 @@ const AdminPanel = () => {
       {/* Toast Notification */}
       {toast && (
         <div className="fixed bottom-4 right-4 z-50 animate-fade-in">
-          <div className={`px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 ${
-            toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
-          }`}>
+          <div className={`px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+            }`}>
             {toast.type === 'success' ? (
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
