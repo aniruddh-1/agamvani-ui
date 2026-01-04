@@ -27,6 +27,7 @@ import PrivacyPolicy from './components/legal/PrivacyPage'
 import TermsOfService from './components/legal/TermsPage'
 import SatsangSchedule from './components/SatsangSchedule'
 import AuditionModal from './components/modals/AuditionModal'
+import AppUpdateChecker from './components/AppUpdateChecker'
 
 // Loading component
 const LoadingSpinner = ({ message = 'Loading...' }) => (
@@ -137,6 +138,8 @@ const RadioPage = () => {
     initializeRadio()
   }, [])
 
+  // App Update Checker is rendered at component level
+
   const initializeRadio = async () => {
     try {
       setLoading(true)
@@ -236,6 +239,9 @@ const RadioPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 p-6">
+      {/* App Update Checker for Android - shows modal when update available */}
+      <AppUpdateChecker language="hi" />
+
       {/* Admin Invite Button - Fixed, not zoomable */}
       {user?.is_admin && <InviteButton />}
 
