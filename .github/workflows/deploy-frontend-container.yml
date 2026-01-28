@@ -67,8 +67,8 @@ jobs:
           echo "❌ VITE_GOOGLE_CLIENT_ID is required"
           exit 1
         fi
-        if [ -z "${{ secrets.SERVER_HOST }}" ]; then
-          echo "❌ SERVER_HOST is required for nginx configuration"
+        if [ -z "${{ secrets.TAILSCALE_SERVER_IP }}" ]; then
+          echo "❌ TAILSCALE_SERVER_IP is required for deployment"
           exit 1
         fi
         echo "✅ All required environment variables are set"
@@ -80,7 +80,7 @@ jobs:
         # Create nginx environment file for deployment
         cat > nginx.env << EOF
         # Nginx deployment environment (auto-generated)
-        SERVER_IP=${{ secrets.SERVER_HOST }}
+        SERVER_IP=${{ secrets.TAILSCALE_SERVER_IP }}
         DOMAIN_NAME=av\\.ramsabha\\.in
         STATIC_FILES_PATH=${{ env.DEPLOY_DIR }}/dist
         BACKEND_HOST=127.0.0.1
@@ -117,34 +117,36 @@ jobs:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
         log-public-key: false
 
-    - name: Smart Firewall Update - Whitelist Current Runner IP Only
-      run: |
-        echo "🧠 Smart Firewall Update: Detecting and whitelisting current runner IP..."
-        chmod +x scripts/smart-firewall-deploy.sh
-        HETZNER_API_TOKEN="${{ secrets.HETZNER_API_TOKEN }}" ./scripts/smart-firewall-deploy.sh
+    - name: Setup Tailscale VPN
+      uses: tailscale/github-action@v3
+      with:
+        oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+        oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+        tags: tag:ci
+        version: 1.92.3
 
     - name: Configure SSH settings
       run: |
         mkdir -p ~/.ssh
-        echo "Configuring SSH for deployment..."
+        echo "Configuring SSH for Tailscale deployment..."
         {
-          echo "Host ${{ secrets.SERVER_HOST }}"
+          echo "Host ${{ secrets.TAILSCALE_SERVER_IP }}"
           echo "    StrictHostKeyChecking no"
           echo "    UserKnownHostsFile /dev/null"
           echo "    LogLevel ERROR"
         } >> ~/.ssh/config
-        echo "SSH configured for secure deployment"
+        echo "SSH configured for Tailscale deployment"
 
     - name: Upload Docker image to server
       run: |
         echo "📤 Uploading Docker image to server..."
-        scp agamvani-ui-image.tar ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/
+        scp agamvani-ui-image.tar ${{ secrets.SERVER_USER }}@${{ secrets.TAILSCALE_SERVER_IP }}:/tmp/
         echo "✅ Docker image uploaded"
 
     - name: Ensure Docker is installed on server
       run: |
         echo "🐳 Checking Docker installation on server..."
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.TAILSCALE_SERVER_IP }} "
           if ! command -v docker &> /dev/null; then
             echo '⚠️  Docker not found, installing...'
             curl -fsSL https://get.docker.com -o /tmp/get-docker.sh &&
@@ -162,7 +164,7 @@ jobs:
     - name: Deploy container on server
       run: |
         echo "🚀 Deploying container on server..."
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.TAILSCALE_SERVER_IP }} "
           echo '📋 Loading Docker image...' &&
           cd /tmp &&
           docker load -i agamvani-ui-image.tar &&
@@ -200,7 +202,7 @@ jobs:
     - name: Ensure nginx is installed and configured
       run: |
         echo "🐳 Ensuring nginx is installed on server..."
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.TAILSCALE_SERVER_IP }} "
           if ! command -v nginx &> /dev/null; then
             echo '⚠️  Nginx not found, installing...'
             sudo apt-get update &&
@@ -222,7 +224,7 @@ jobs:
     - name: Install SSL certificates with certbot
       run: |
         echo "🔒 Installing SSL certificates..."
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.TAILSCALE_SERVER_IP }} "
           if [ ! -f /etc/letsencrypt/live/av.ramsabha.in/fullchain.pem ]; then
             echo '📦 Installing certbot...'
             sudo apt-get update &&
@@ -265,17 +267,17 @@ jobs:
         echo "🔧 Deploying optimized nginx configurations to server..."
         
         # Upload site-specific configuration
-        scp nginx-configs/agamvani-domain ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/agamvani-platform-nginx
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+        scp nginx-configs/agamvani-domain ${{ secrets.SERVER_USER }}@${{ secrets.TAILSCALE_SERVER_IP }}:/tmp/agamvani-platform-nginx
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.TAILSCALE_SERVER_IP }} "
           sudo mv /tmp/agamvani-platform-nginx ${{ env.NGINX_SITES_AVAILABLE }}/${{ env.SITE_NAME }}
         "
         
         # Upload main nginx.conf if it doesn't exist or is different
         echo "Uploading optimized main nginx configuration..."
-        scp nginx-configs/nginx.conf ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/nginx-main.conf
+        scp nginx-configs/nginx.conf ${{ secrets.SERVER_USER }}@${{ secrets.TAILSCALE_SERVER_IP }}:/tmp/nginx-main.conf
         
         # Install main nginx.conf
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.TAILSCALE_SERVER_IP }} "
           echo 'Installing optimized nginx.conf...' &&
           sudo mv /tmp/nginx-main.conf /etc/nginx/nginx.conf &&
           
@@ -285,7 +287,7 @@ jobs:
     - name: Enable nginx site configuration
       run: |
         echo "🔗 Enabling nginx site configuration..."
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.TAILSCALE_SERVER_IP }} "
           echo '🔗 Creating symbolic link to enable site...' &&
           sudo ln -sf ${{ env.NGINX_SITES_AVAILABLE }}/${{ env.SITE_NAME }} /etc/nginx/sites-enabled/${{ env.SITE_NAME }} &&
           echo '✅ Site configuration enabled successfully'
@@ -294,7 +296,7 @@ jobs:
     - name: Test and reload nginx
       run: |
         echo "♻️ Testing and reloading nginx..."
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.TAILSCALE_SERVER_IP }} "
           echo '🔧 Testing nginx configuration...' &&
           sudo nginx -t &&
           
@@ -349,12 +351,12 @@ jobs:
       run: |
         echo "🧹 Cleaning up temporary files..."
         rm -f agamvani-ui-image.tar
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "rm -f /tmp/agamvani-ui-image.tar"
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.TAILSCALE_SERVER_IP }} "rm -f /tmp/agamvani-ui-image.tar"
 
     - name: Docker system cleanup
       run: |
         echo "🧹 Running Docker system cleanup on server..."
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.TAILSCALE_SERVER_IP }} "
           echo '🐳 Running docker system prune to clean up unused data...' &&
           docker system prune -f || echo 'System prune completed' &&
           echo '📊 Docker space usage after cleanup:' &&
@@ -362,12 +364,10 @@ jobs:
           echo '✅ Docker cleanup completed'
         "
 
-    - name: Cleanup firewall rules
+    - name: Tailscale cleanup
       if: always()
       run: |
-        echo "🧹 Cleaning up temporary GitHub Actions firewall rules..."
-        chmod +x scripts/cleanup-firewall.sh
-        HETZNER_API_TOKEN="${{ secrets.HETZNER_API_TOKEN }}" ./scripts/cleanup-firewall.sh
+        echo "✅ Tailscale session completed - ephemeral node will be auto-removed"
 
     - name: Deployment summary
       run: |
