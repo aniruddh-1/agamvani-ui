@@ -17,6 +17,28 @@ const SatsangSchedule = () => {
                 label: 'व्हाट्सएप ग्रुप: ll रामसभा भारत ll Ram Sabha Bharat',
                 url: 'https://chat.whatsapp.com/JOOLH9G51iR3LcCqSaDFfA',
                 note: 'विशेष अवसर पर आयोजित सुमिरण की सूचना व्हाट्सएप ग्रुप पर पोस्ट की जाती है'
+            },
+            doubtResolution: {
+                title: 'शंका समाधान के लिए संचालित ग्रुप्स',
+                groups: [
+                    {
+                        label: 'रामद्वारा (पुणे) महाराष्ट्र',
+                        url: 'https://chat.whatsapp.com/KbQRxH571gx23T2S67ALuF'
+                    }
+                ]
+            },
+            regionalSatsang: {
+                title: 'क्षेत्रीय सत्संग सूचना के ग्रुप्स',
+                groups: [
+                    {
+                        label: 'जोधपुर सत्संग प्रसारण केंद्र',
+                        url: 'https://chat.whatsapp.com/LZgIEupk7RHEonCccddzbp'
+                    },
+                    {
+                        label: 'साण्डेराव सत्संग प्रसारण केंद्र',
+                        url: 'https://chat.whatsapp.com/KBg9AMSwXFSDENWZULk2s0'
+                    }
+                ]
             }
         },
         satsang: {
@@ -116,24 +138,24 @@ const SatsangSchedule = () => {
                                     </svg>
                                     <span className="text-sm font-semibold text-blue-800">📱 कीपैड मोबाइल से सुनने हेतु:</span>
                                 </div>
-                                
+
                                 <p className="text-xs text-gray-600 italic">
                                     (40 सेकंड में सत्संग में सम्मिलित हो जाएँगे)
                                 </p>
 
                                 <div className="space-y-2">
                                     <p className="text-xs font-medium text-gray-700">नीचे दिए गए किसी भी एक नंबर पर डायल करें:</p>
-                                    
-                                    <a 
+
+                                    <a
                                         href="tel:+911164800114,,26441014121#,#,#"
                                         className="block bg-white p-2 rounded border border-blue-300 hover:bg-blue-50 transition-colors"
                                     >
                                         <code className="text-xs text-blue-900 font-mono break-all">+911164800114,,26441014121#,#,#</code>
                                     </a>
-                                    
+
                                     <p className="text-xs text-center text-gray-600 font-medium">या</p>
-                                    
-                                    <a 
+
+                                    <a
                                         href="tel:+911164800114,,*26441014121#,,,#"
                                         className="block bg-white p-2 rounded border border-blue-300 hover:bg-blue-50 transition-colors"
                                     >
@@ -176,6 +198,58 @@ const SatsangSchedule = () => {
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                     </svg>
                                 </a>
+                            </div>
+
+                            {/* Doubt Resolution Groups */}
+                            <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
+                                <p className="text-xs font-semibold text-amber-800 mb-2">
+                                    {content.sumiran.doubtResolution.title}
+                                </p>
+                                <div className="space-y-2">
+                                    {content.sumiran.doubtResolution.groups.map((group, idx) => (
+                                        <a
+                                            key={idx}
+                                            href={group.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-2 text-sm font-medium text-amber-700 hover:underline"
+                                        >
+                                            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                            </svg>
+                                            <span>{group.label}</span>
+                                            <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                            </svg>
+                                        </a>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Regional Satsang Groups */}
+                            <div className="p-3 rounded-lg bg-purple-50 border border-purple-200">
+                                <p className="text-xs font-semibold text-purple-800 mb-2">
+                                    {content.sumiran.regionalSatsang.title}
+                                </p>
+                                <div className="space-y-2">
+                                    {content.sumiran.regionalSatsang.groups.map((group, idx) => (
+                                        <a
+                                            key={idx}
+                                            href={group.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-2 text-sm font-medium text-purple-700 hover:underline"
+                                        >
+                                            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                            </svg>
+                                            <span>{group.label}</span>
+                                            <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                            </svg>
+                                        </a>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -198,7 +198,7 @@ export const AppUpdateChecker = ({ language = 'en' }) => {
                             <div className="space-y-3">
                                 <button
                                     onClick={handleImmediateUpdate}
-                                    className="w-full py-3 bg-saffron-600 text-white rounded-xl font-medium hover:bg-saffron-700 transition-colors flex items-center justify-center gap-2"
+                                    className="w-full py-3 bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 transition-colors flex items-center justify-center gap-2 shadow-md"
                                 >
                                     <Download className="w-5 h-5" />
                                     {t.updateNow}
@@ -206,7 +206,7 @@ export const AppUpdateChecker = ({ language = 'en' }) => {
 
                                 <button
                                     onClick={handleDismiss}
-                                    className="w-full py-3 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                                    className="w-full py-3 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-white rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors border border-gray-300 dark:border-gray-500"
                                 >
                                     {t.later}
                                 </button>
