@@ -27,11 +27,11 @@ const AuditionModal = ({ auditionLinks, onClose }) => {
   }
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 transform transition-all"
         onClick={(e) => e.stopPropagation()}
       >
@@ -124,6 +124,27 @@ const AuditionModal = ({ auditionLinks, onClose }) => {
               </div>
             </a>
           )}
+
+          {/* Public Sheet - Always visible */}
+          <a
+            href="https://docs.google.com/spreadsheets/d/15dzPDfadil2-ZUxrAs93Fil8TM4i3QiIkvuOO6f4kJc"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full px-6 py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all transform hover:scale-105 shadow-md hover:shadow-lg"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">📑</span>
+                <div className="text-left">
+                  <div className="font-semibold">Status of Approver's Sheet</div>
+                  <div className="text-sm text-amber-100">Approver's Dashboard</div>
+                </div>
+              </div>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </div>
+          </a>
         </div>
 
         {/* Footer */}
