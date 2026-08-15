@@ -1,10 +1,11 @@
 import { useAuth } from '../../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 const PendingVerification = () => {
-  const { user, logout } = useAuth()
+  const { user, logout, refreshUser } = useAuth()
   const navigate = useNavigate()
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   // Auto-redirect if user is approved
   useEffect(() => {
@@ -87,6 +88,52 @@ const PendingVerification = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
               Edit Profile
+            </button>
+
+            <button
+              onClick={async () => {
+                setIsRefreshing(true)
+                try {
+                  await refreshUser()
+                } catch (error) {
+                  console.error('Failed to refresh status:', error)
+                } finally {
+                  setIsRefreshing(false)
+                }
+              }}
+              disabled={isRefreshing}
+              style={{
+                width: '100%',
+                padding: '12px 24px',
+                backgroundColor: 'transparent',
+                color: '#6b7280',
+                borderRadius: '8px',
+                border: '2px solid #e5e7eb',
+                fontSize: '16px',
+                fontWeight: '500',
+                cursor: isRefreshing ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                transition: 'all 0.2s ease',
+                opacity: isRefreshing ? 0.6 : 1
+              }}
+              onMouseOver={(e) => {
+                if (!isRefreshing) {
+                  e.target.style.backgroundColor = '#f9fafb'
+                  e.target.style.borderColor = '#d1d5db'
+                  e.target.style.color = '#374151'
+                }
+              }}
+              onMouseOut={(e) => {
+                e.target.style.backgroundColor = 'transparent'
+                e.target.style.borderColor = '#e5e7eb'
+                e.target.style.color = '#6b7280'
+              }}
+            >
+              <span style={{ display: 'inline-block', animation: isRefreshing ? 'spin 1s linear infinite' : 'none' }}>🔄</span>
+              {isRefreshing ? 'Checking...' : 'Refresh Status'}
             </button>
             
             <button
