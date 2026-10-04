@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useDropdownData } from '../../hooks/useDropdownData'
@@ -37,15 +37,54 @@ const ProfileCompletion = () => {
     gender: ''
   })
 
+  // If the user fills this profile on Sukhovach while this page is open in another
+  // tab, the profile is synced here; re-check when the tab regains focus and move on
+  // instead of asking for the same details again. Not for "Edit Profile" visits.
+  const startedIncompleteRef = useRef(null)
+  const submittingRef = useRef(false)
+  useEffect(() => {
+    if (user && startedIncompleteRef.current === null) {
+      startedIncompleteRef.current = !user.profile_completed
+    }
+  }, [user])
+  useEffect(() => {
+    const recheck = async () => {
+      if (!startedIncompleteRef.current || submittingRef.current || document.visibilityState !== 'visible') {
+        return
+      }
+      let fresh
+      try {
+        fresh = await refreshUser()
+      } catch {
+        return
+      }
+      if (fresh?.profile_completed && !submittingRef.current) {
+        const approved = fresh.is_admin || fresh.is_verified ||
+          fresh.verification_status === 'approved' || fresh.approval_method === 'invitation'
+        navigate(approved ? '/' : '/pending-verification', { replace: true })
+      }
+    }
+    window.addEventListener('focus', recheck)
+    document.addEventListener('visibilitychange', recheck)
+    return () => {
+      window.removeEventListener('focus', recheck)
+      document.removeEventListener('visibilitychange', recheck)
+    }
+  }, [refreshUser, navigate])
+
   useEffect(() => {
     // Pre-populate form with existing user data if available
     if (user && formData.first_name === '' && formData.last_name === '') {
       const selectedCountryCode = user.country || 'IN'
       setSelectedCountry(selectedCountryCode)
       
+      // Users who signed in with Google before names were stored only have full_name
+      const [nameFirst = '', ...nameRest] = (user.full_name || '').trim().split(/\s+/)
+      const hasSplitNames = user.first_name || user.last_name
+
       const newFormData = {
-        first_name: user.first_name || '',
-        last_name: user.last_name || '',
+        first_name: user.first_name || (hasSplitNames ? '' : nameFirst),
+        last_name: user.last_name || (hasSplitNames ? '' : nameRest.join(' ')),
         full_name: user.full_name || '',
         phone_number: user.phone_number || '',
         address: user.address || '',
@@ -129,6 +168,7 @@ const ProfileCompletion = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    submittingRef.current = true
     setLoading(true)
     setError('')
     setProcessingStep('Preparing profile data...')
@@ -243,6 +283,7 @@ const ProfileCompletion = () => {
       
       setError(errorMessage)
     } finally {
+      submittingRef.current = false
       setLoading(false)
       setProcessingStep('')
     }
