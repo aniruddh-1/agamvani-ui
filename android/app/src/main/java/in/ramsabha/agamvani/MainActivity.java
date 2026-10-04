@@ -8,13 +8,14 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        // Local plugins must be registered before super.onCreate(), which builds the
+        // bridge; plugins registered afterwards are never exposed to JS.
+        registerPlugin(BackgroundAudioPlugin.class);
+
         super.onCreate(savedInstanceState);
 
         // Enable WebView debugging for Chrome DevTools (chrome://inspect)
         WebView.setWebContentsDebuggingEnabled(true);
-
-        // Register custom plugins
-        registerPlugin(BackgroundAudioPlugin.class);
 
         // Enable media playback in background
         if (this.bridge != null && this.bridge.getWebView() != null) {
