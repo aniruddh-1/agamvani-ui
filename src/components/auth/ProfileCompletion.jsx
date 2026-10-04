@@ -92,7 +92,8 @@ const ProfileCompletion = () => {
         state: user.state || '',
         country: selectedCountryCode,
         postal_code: user.postal_code || '',
-        date_of_birth: user.date_of_birth || '',
+        // The API sends a full timestamp; <input type="date"> only accepts YYYY-MM-DD
+        date_of_birth: (user.date_of_birth || '').slice(0, 10),
         gender: user.gender || ''
       }
       
