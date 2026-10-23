@@ -96,7 +96,6 @@ jobs:
           Host production
             HostName ${DEPLOY_HOST}
             User ${DEPLOY_USER}
-            IdentitiesOnly yes
             StrictHostKeyChecking yes
             UserKnownHostsFile ~/.ssh/known_hosts
             BatchMode yes
