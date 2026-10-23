@@ -1,6 +1,7 @@
 package in.ramsabha.agamvani;
 
 import android.os.Bundle;
+import android.content.pm.ApplicationInfo;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
@@ -14,8 +15,9 @@ public class MainActivity extends BridgeActivity {
 
         super.onCreate(savedInstanceState);
 
-        // Enable WebView debugging for Chrome DevTools (chrome://inspect)
-        WebView.setWebContentsDebuggingEnabled(true);
+        // Never expose WebView internals in release builds.
+        boolean debuggable = (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+        WebView.setWebContentsDebuggingEnabled(debuggable);
 
         // Enable media playback in background
         if (this.bridge != null && this.bridge.getWebView() != null) {

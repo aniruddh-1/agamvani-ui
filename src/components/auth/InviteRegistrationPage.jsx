@@ -138,18 +138,11 @@ const InviteRegistrationPage = () => {
           payload.invitation_token = token;
         }
         
-        const response = await axios.post(
+        await axios.post(
           `${API_BASE_URL}/auth/google/native`,
           payload,
-          { headers: { 'Content-Type': 'application/json' } }
+          { headers: { 'Content-Type': 'application/json' }, withCredentials: true }
         );
-        
-        // Store tokens
-        const { access_token, refresh_token } = response.data;
-        localStorage.setItem('access_token', access_token);
-        if (refresh_token) {
-          localStorage.setItem('refresh_token', refresh_token);
-        }
         
         console.log('✅ Native Google Sign-In successful with invitation');
         

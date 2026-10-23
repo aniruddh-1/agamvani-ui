@@ -117,11 +117,8 @@ export const API_ENDPOINTS = {
 
 // Local Storage Keys
 export const STORAGE_KEYS = {
-  ACCESS_TOKEN: 'access_token',
-  REFRESH_TOKEN: 'refresh_token',
   USER_ID: 'user_id',
   USER_EMAIL: 'user_email',
-  TOKEN_EXPIRES_AT: 'token_expires_at',
   THEME: 'theme',
   LANGUAGE: 'language',
 };
