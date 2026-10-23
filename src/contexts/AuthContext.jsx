@@ -158,26 +158,6 @@ export const AuthProvider = ({ children }) => {
     setUser(null)
     setIsAuthenticated(false)
     
-    // Clear specific auth-related items from storage
-    const authKeys = ['access_token', 'refresh_token', 'user_id', 'user_email', 'token_expires_at']
-    authKeys.forEach(key => {
-      localStorage.removeItem(key)
-      sessionStorage.removeItem(key)
-    })
-    sessionStorage.clear()
-    
-    // Clear all cookies aggressively for both localhost and production
-    const domains = ['localhost', '.localhost', '.ramsabha.in', 'ramsabha.in', '.av.ramsabha.in', 'av.ramsabha.in']
-    document.cookie.split(";").forEach(function(c) { 
-      const eqPos = c.indexOf("=");
-      const name = eqPos > -1 ? c.substr(0, eqPos).trim() : c.trim();
-      // Clear for all possible domains and paths
-      domains.forEach(domain => {
-        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${domain}`;
-      })
-      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-    });
-    
     // Force immediate redirect
     window.location.replace('/login')
   }

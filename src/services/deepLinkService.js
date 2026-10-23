@@ -1,6 +1,25 @@
 import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 
+const ALLOWED_ROUTES = [
+  /^\/$/, /^\/login$/, /^\/register$/, /^\/register\/invite\/[A-Za-z0-9_-]{20,128}$/,
+  /^\/forgot-password$/, /^\/reset-password$/, /^\/privacy-policy$/,
+  /^\/terms-of-service$/, /^\/settings$/, /^\/change-password$/,
+];
+
+const validatedPath = (urlObj) => {
+  if (urlObj.protocol !== 'https:' || urlObj.hostname !== 'av.ramsabha.in') return null;
+  if (!ALLOWED_ROUTES.some((pattern) => pattern.test(urlObj.pathname))) return null;
+  const allowedQuery = new URLSearchParams();
+  if (urlObj.pathname === '/reset-password' && urlObj.searchParams.has('token')) {
+    const token = urlObj.searchParams.get('token');
+    if (!/^[A-Za-z0-9_-]{20,128}$/.test(token)) return null;
+    allowedQuery.set('token', token);
+  }
+  const query = allowedQuery.toString();
+  return urlObj.pathname + (query ? `?${query}` : '');
+};
+
 class DeepLinkService {
   navigationHandler = null;
   launchUrlProcessed = false;
@@ -34,12 +53,13 @@ class DeepLinkService {
 
       // Handle general app deep links for av.ramsabha.in
       if (urlObj.host === 'av.ramsabha.in') {
-        const path = urlObj.pathname + urlObj.search;
+        const path = validatedPath(urlObj);
+        if (!path) return;
         
         if (this.navigationHandler) {
           this.navigationHandler(path);
         } else {
-          localStorage.setItem('pendingDeepLinkPath', path);
+          sessionStorage.setItem('pendingDeepLinkPath', path);
         }
       }
 
@@ -50,9 +70,9 @@ class DeepLinkService {
 
   // Get and clear any pending deep link path
   getPendingPath() {
-    const path = localStorage.getItem('pendingDeepLinkPath');
+    const path = sessionStorage.getItem('pendingDeepLinkPath');
     if (path) {
-      localStorage.removeItem('pendingDeepLinkPath');
+      sessionStorage.removeItem('pendingDeepLinkPath');
       return path;
     }
     return null;
@@ -78,8 +98,7 @@ class DeepLinkService {
         
         // Only handle general deep links, not OAuth
         if (urlObj.host === 'av.ramsabha.in' && !urlObj.pathname.startsWith('/auth/google/callback')) {
-          const path = urlObj.pathname + urlObj.search;
-          return path;
+          return validatedPath(urlObj);
         }
       }
     } catch (error) {

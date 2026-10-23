@@ -43,18 +43,11 @@ const LoginPage = () => {
         const googleResult = await nativeGoogleAuth.signIn()
         
         // Send ID token to backend for authentication
-        const response = await axios.post(
+        await axios.post(
           `${API_BASE_URL}/auth/google/native`,
           { id_token: googleResult.idToken },
-          { headers: { 'Content-Type': 'application/json' } }
+          { headers: { 'Content-Type': 'application/json' }, withCredentials: true }
         )
-        
-        // Store tokens
-        const { access_token, refresh_token } = response.data
-        localStorage.setItem('access_token', access_token)
-        if (refresh_token) {
-          localStorage.setItem('refresh_token', refresh_token)
-        }
         
         console.log('✅ Native Google Sign-In successful')
         

@@ -1,12 +1,5 @@
 # Multi-stage build for React application with nginx
-FROM node:18-alpine as builder
-
-# Set environment variables for build stage  
-ENV PNPM_HOME="/pnpm" \
-    PATH="$PNPM_HOME:$PATH"
-
-# Install pnpm for faster builds
-RUN corepack enable
+FROM node:22-alpine AS builder
 
 # Set working directory
 WORKDIR /app
@@ -24,9 +17,10 @@ COPY . .
 RUN npm run build
 
 # Production stage with nginx
-FROM nginx:alpine as production
+FROM nginxinc/nginx-unprivileged:alpine AS production
 
 # Install curl for health checks
+USER root
 RUN apk add --no-cache curl
 
 # Copy custom nginx configuration
@@ -37,7 +31,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Create nginx user and set proper permissions
 RUN chown -R nginx:nginx /usr/share/nginx/html && \
-    chmod -R 755 /usr/share/nginx/html
+    chmod -R a-w /usr/share/nginx/html
 
 # Add labels for safer cleanup and management
 LABEL org.agamvani.service="ui" \
@@ -46,11 +40,12 @@ LABEL org.agamvani.service="ui" \
       maintainer="agamvani-platform"
 
 # Expose port 80
-EXPOSE 80
+EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost/health || exit 1
+    CMD curl -f http://localhost:8080/health || exit 1
 
 # Start nginx
+USER nginx
 CMD ["nginx", "-g", "daemon off;"]

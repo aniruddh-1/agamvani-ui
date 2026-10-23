@@ -1,3 +1,10 @@
+# Local-only fallback. Prefer the equivalent protected CI variables:
+# ANDROID_KEYSTORE_PATH, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS,
+# ANDROID_KEY_PASSWORD.
+storeFile=/absolute/path/to/release.keystore
+storePassword=replace-via-secret-manager
+keyAlias=release
+keyPassword=replace-via-secret-manager
 # Android Signing Configuration for Agamvani
 # Copy this file to key.properties and fill in your values
 # NEVER commit key.properties to version control

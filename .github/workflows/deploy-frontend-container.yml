@@ -1,399 +1,181 @@
-name: Deploy Frontend Container to Production
+name: Deploy Frontend Container
 
 on:
   push:
     branches: [main]
-  workflow_dispatch:  # Allow manual trigger
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agamvani-ui-production
+  cancel-in-progress: false
+
+env:
+  DEPLOY_HOST: ${{ secrets.TAILSCALE_SERVER_IP }}
+  DEPLOY_USER: deploy
+  DEPLOY_ROOT: /opt/agamvani-platform/agamvani-ui
+  IMAGE: agamvani-ui:${{ github.sha }}
+  HOST_PORT: "3001"
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
-    env:
-      # Container Configuration (non-sensitive)
-      CONTAINER_NAME: agamvani-ui
-      IMAGE_NAME: agamvani-ui:latest
-      CONTAINER_PORT: 3001
-      NODE_ENV: production
-      DEPLOY_DIR: /opt/agamvani-platform/agamvani-ui
-      NGINX_SITES_AVAILABLE: /etc/nginx/sites-available
-      SITE_NAME: agamvani-platform
-      # Nginx deployment configuration
-      NGINX_CONFIG_TYPE: domain-server
-    
+    environment: production
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          cache: npm
 
-    - name: Create environment file from secrets
-      run: |
-        cat > .env.production << EOF
-        # Agamvani Radio - Frontend Environment (Production)
-        # Generated automatically by GitHub Actions
-        
-        # API Configuration
-        VITE_API_ROOT_URL=${{ secrets.VITE_API_ROOT_URL }}
-        VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}
-        
-        # Frontend Configuration
-        VITE_FRONTEND_URL=${{ secrets.VITE_FRONTEND_URL }}
-        VITE_FRONTEND_DEV_URL=${{ secrets.VITE_FRONTEND_DEV_URL }}
-        
-        # Google OAuth Configuration
-        VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
-        
-        # Environment
-        NODE_ENV=production
-        EOF
+      - name: Build and audit
+        env:
+          VITE_API_ROOT_URL: ${{ secrets.VITE_API_ROOT_URL }}
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          VITE_FRONTEND_URL: ${{ secrets.VITE_FRONTEND_URL }}
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+        run: |
+          set -euo pipefail
+          : "${VITE_API_BASE_URL:?VITE_API_BASE_URL is required}"
+          : "${VITE_FRONTEND_URL:?VITE_FRONTEND_URL is required}"
+          : "${VITE_GOOGLE_CLIENT_ID:?VITE_GOOGLE_CLIENT_ID is required}"
+          npm ci --no-fund --no-audit
+          npm run build
+          npm audit --audit-level=high
+          docker build --tag "$IMAGE" .
+          docker save "$IMAGE" | gzip -9 > ui-image.tar.gz
 
-    - name: Validate environment variables
-      run: |
-        echo "🔍 Validating environment variables..."
-        if [ -z "${{ secrets.VITE_API_ROOT_URL }}" ]; then
-          echo "❌ VITE_API_ROOT_URL is required"
-          exit 1
-        fi
-        if [ -z "${{ secrets.VITE_FRONTEND_URL }}" ]; then
-          echo "❌ VITE_FRONTEND_URL is required"
-          exit 1
-        fi
-        if [ -z "${{ secrets.VITE_GOOGLE_CLIENT_ID }}" ]; then
-          echo "❌ VITE_GOOGLE_CLIENT_ID is required"
-          exit 1
-        fi
-        if [ -z "${{ secrets.TAILSCALE_SERVER_IP }}" ]; then
-          echo "❌ TAILSCALE_SERVER_IP is required for deployment"
-          exit 1
-        fi
-        echo "✅ All required environment variables are set"
+      - name: Generate site configuration
+        env:
+          SERVER_IP: ${{ secrets.TAILSCALE_SERVER_IP }}
+          DOMAIN_NAME: av.ramsabha.in
+          STATIC_FILES_PATH: /opt/agamvani-platform/agamvani-ui/dist
+          BACKEND_HOST: 127.0.0.1
+          BACKEND_PORT: "8002"
+          UI_CONTAINER_HOST: 127.0.0.1
+          UI_CONTAINER_PORT: "3001"
+          DEPLOYMENT_TYPE: domain-server
+          SSL_CERT_PATH: /etc/letsencrypt/live/av.ramsabha.in/fullchain.pem
+          SSL_KEY_PATH: /etc/letsencrypt/live/av.ramsabha.in/privkey.pem
+          SSL_CHAIN_PATH: /etc/letsencrypt/live/av.ramsabha.in/chain.pem
+        run: |
+          set -euo pipefail
+          envsubst '$SERVER_IP,$DOMAIN_NAME,$STATIC_FILES_PATH,$BACKEND_HOST,$BACKEND_PORT,$UI_CONTAINER_HOST,$UI_CONTAINER_PORT,$DEPLOYMENT_TYPE,$SSL_CERT_PATH,$SSL_KEY_PATH,$SSL_CHAIN_PATH' \
+            < nginx-server.conf > agamvani-site.conf
+          nginx -t -c "$PWD/nginx-main.conf" -p "$PWD" 2>/dev/null || true
 
-    - name: Generate nginx deployment configuration
-      run: |
-        echo "🔧 Generating nginx configuration with environment variables..."
-        
-        # Create nginx environment file for deployment
-        cat > nginx.env << EOF
-        # Nginx deployment environment (auto-generated)
-        SERVER_IP=${{ secrets.TAILSCALE_SERVER_IP }}
-        DOMAIN_NAME=av\\.ramsabha\\.in
-        STATIC_FILES_PATH=${{ env.DEPLOY_DIR }}/dist
-        BACKEND_HOST=127.0.0.1
-        BACKEND_PORT=8002
-        UI_CONTAINER_HOST=127.0.0.1
-        UI_CONTAINER_PORT=${{ env.CONTAINER_PORT }}
-        DEPLOYMENT_TYPE=${{ env.NGINX_CONFIG_TYPE }}
-        SSL_CERT_PATH=/etc/letsencrypt/live/av.ramsabha.in/fullchain.pem
-        SSL_KEY_PATH=/etc/letsencrypt/live/av.ramsabha.in/privkey.pem
-        SSL_CHAIN_PATH=/etc/letsencrypt/live/av.ramsabha.in/chain.pem
-        EOF
-        
-        # Generate nginx configurations
-        chmod +x deploy-nginx.sh
-        ./deploy-nginx.sh
-        
-        echo "✅ Nginx configurations generated successfully"
+      - name: Load SSH key
+        uses: webfactory/ssh-agent@d4b9b8ff72958532804b70bbe600ad43b36d5f2e # v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          log-public-key: false
 
-    - name: Build Docker image
-      run: |
-        echo "🏗️ Building Docker image..."
-        docker build -t ${{ env.IMAGE_NAME }} .
-        echo "✅ Docker image built successfully"
+      - name: Connect Tailscale
+        uses: tailscale/github-action@6cae46e2d796f265265cfcf628b72a32b4d7cade # v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+          version: 1.92.3
 
-    - name: Save Docker image
-      run: |
-        echo "💾 Saving Docker image to file..."
-        docker save ${{ env.IMAGE_NAME }} -o agamvani-ui-image.tar
-        echo "✅ Docker image saved"
+      - name: Configure verified SSH host
+        env:
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          : "${SSH_KNOWN_HOSTS:?SSH_KNOWN_HOSTS is required}"
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 0600 ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<EOF
+          Host production
+            HostName ${DEPLOY_HOST}
+            User ${DEPLOY_USER}
+            IdentitiesOnly yes
+            StrictHostKeyChecking yes
+            UserKnownHostsFile ~/.ssh/known_hosts
+            BatchMode yes
+          EOF
+          chmod 0600 ~/.ssh/config
 
-    - name: Setup SSH key
-      uses: webfactory/ssh-agent@v0.8.0
-      with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-        log-public-key: false
+      - name: Upload staged release
+        run: scp ui-image.tar.gz agamvani-site.conf production:/tmp/
 
-    - name: Setup Tailscale VPN
-      uses: tailscale/github-action@v3
-      with:
-        oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
-        oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
-        tags: tag:ci
-        version: 1.92.3
+      - name: Activate with rollback
+        run: |
+          ssh production "sudo -n env COMMIT_SHA='${{ github.sha }}' DEPLOY_ROOT='${DEPLOY_ROOT}' HOST_PORT='${HOST_PORT}' bash -se" <<'REMOTE'
+          set -euo pipefail
+          command -v docker >/dev/null
+          docker network inspect agamvani-network >/dev/null 2>&1 || docker network create agamvani-network >/dev/null
+          command -v nginx >/dev/null
+          test -f /etc/letsencrypt/live/av.ramsabha.in/fullchain.pem
+          test -f /etc/letsencrypt/live/av.ramsabha.in/privkey.pem
 
-    - name: Configure SSH settings
-      run: |
-        mkdir -p ~/.ssh
-        echo "Configuring SSH for Tailscale deployment..."
-        {
-          echo "Host ${{ secrets.TAILSCALE_SERVER_IP }}"
-          echo "    StrictHostKeyChecking no"
-          echo "    UserKnownHostsFile /dev/null"
-          echo "    LogLevel ERROR"
-        } >> ~/.ssh/config
-        echo "SSH configured for Tailscale deployment"
-
-    - name: Upload Docker image to server
-      run: |
-        echo "📤 Uploading Docker image to server..."
-        scp agamvani-ui-image.tar ${{ secrets.SERVER_USER }}@${{ secrets.TAILSCALE_SERVER_IP }}:/tmp/
-        echo "✅ Docker image uploaded"
-
-    - name: Ensure Docker is installed on server
-      run: |
-        echo "🐳 Checking Docker installation on server..."
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.TAILSCALE_SERVER_IP }} "
-          if ! command -v docker &> /dev/null; then
-            echo '⚠️  Docker not found, installing...'
-            curl -fsSL https://get.docker.com -o /tmp/get-docker.sh &&
-            sudo sh /tmp/get-docker.sh &&
-            sudo systemctl enable docker &&
-            sudo systemctl start docker &&
-            sudo usermod -aG docker \$(whoami) &&
-            echo '✅ Docker installed successfully'
-          else
-            echo '✅ Docker is already installed'
-            docker --version
+          install -d -m 0750 "${DEPLOY_ROOT}/releases/${COMMIT_SHA}"
+          docker load < /tmp/ui-image.tar.gz >/dev/null
+          site=/etc/nginx/sites-available/agamvani-platform
+          site_backup="${DEPLOY_ROOT}/releases/${COMMIT_SHA}/agamvani-site.previous"
+          if [ -f "$site" ]; then
+            cp --preserve=mode,ownership,timestamps "$site" "$site_backup"
           fi
-        "
+          install -m 0644 /tmp/agamvani-site.conf "$site"
+          ln -sfn "$site" /etc/nginx/sites-enabled/agamvani-platform
+          nginx -t
 
-    - name: Deploy container on server
-      run: |
-        echo "🚀 Deploying container on server..."
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.TAILSCALE_SERVER_IP }} "
-          echo '📋 Loading Docker image...' &&
-          cd /tmp &&
-          docker load -i agamvani-ui-image.tar &&
-          
-          echo '🛑 Stopping existing container if running...' &&
-          docker stop ${{ env.CONTAINER_NAME }} 2>/dev/null || echo 'No existing container to stop' &&
-          docker rm ${{ env.CONTAINER_NAME }} 2>/dev/null || echo 'No existing container to remove' &&
-          
-          echo '🚀 Starting new container...' &&
-          mkdir -p ${{ env.DEPLOY_DIR }}/logs &&
-          docker run -d \\
-            --name ${{ env.CONTAINER_NAME }} \\
-            --restart unless-stopped \\
-            -p 127.0.0.1:${{ env.CONTAINER_PORT }}:80 \\
-            -v ${{ env.DEPLOY_DIR }}/logs:/var/log/nginx \\
-            -e NODE_ENV=${{ env.NODE_ENV }} \\
-            ${{ env.IMAGE_NAME }} &&
-          
-          echo '⏳ Waiting for container to be healthy...' &&
-          sleep 10 &&
-          
-          echo '🔍 Checking container status...' &&
-          docker ps | grep ${{ env.CONTAINER_NAME }} &&
-          
-          echo '🏥 Testing container health...' &&
-          curl -f http://localhost:${{ env.CONTAINER_PORT }}/health || {
-            echo '❌ Container health check failed!'
-            docker logs ${{ env.CONTAINER_NAME }} --tail 20
-            exit 1
-          } &&
-          
-          echo '✅ Container is running and healthy!'
-        "
-
-    - name: Ensure nginx is installed and configured
-      run: |
-        echo "🐳 Ensuring nginx is installed on server..."
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.TAILSCALE_SERVER_IP }} "
-          if ! command -v nginx &> /dev/null; then
-            echo '⚠️  Nginx not found, installing...'
-            sudo apt-get update &&
-            sudo apt-get install -y nginx &&
-            sudo systemctl enable nginx &&
-            sudo systemctl start nginx &&
-            echo '✅ Nginx installed successfully'
-          else
-            echo '✅ Nginx is already installed'
-            nginx -V
-          fi &&
-          
-          echo 'Creating nginx directories...' &&
-          sudo mkdir -p ${{ env.NGINX_SITES_AVAILABLE }} &&
-          sudo mkdir -p /etc/nginx/sites-enabled &&
-          echo '✅ Nginx directories created'
-        "
-    
-    - name: Install SSL certificates with certbot
-      run: |
-        echo "🔒 Installing SSL certificates..."
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.TAILSCALE_SERVER_IP }} "
-          if [ ! -f /etc/letsencrypt/live/av.ramsabha.in/fullchain.pem ]; then
-            echo '📦 Installing certbot...'
-            sudo apt-get update &&
-            sudo apt-get install -y certbot &&
-            
-            echo '🔐 Obtaining SSL certificate for av.ramsabha.in using standalone mode...'
-            echo '⚠️  Temporarily stopping nginx to allow certbot to bind to port 80...'
-            sudo systemctl stop nginx || true &&
-            
-            sudo certbot certonly --standalone --non-interactive --agree-tos \\
-              --email ${{ secrets.SSL_EMAIL }} \\
-              --preferred-challenges http \\
-              -d av.ramsabha.in &&
-            
-            echo '♻️ Configuring auto-renewal (certs expire in 90 days)...'
-            echo 'Setting up renewal hooks to safely stop/start nginx during renewal...'
-            sudo mkdir -p /etc/letsencrypt/renewal-hooks/pre /etc/letsencrypt/renewal-hooks/post &&
-            echo '#!/bin/bash' | sudo tee /etc/letsencrypt/renewal-hooks/pre/stop-nginx.sh > /dev/null &&
-            echo 'systemctl stop nginx' | sudo tee -a /etc/letsencrypt/renewal-hooks/pre/stop-nginx.sh > /dev/null &&
-            echo '#!/bin/bash' | sudo tee /etc/letsencrypt/renewal-hooks/post/start-nginx.sh > /dev/null &&
-            echo 'systemctl start nginx' | sudo tee -a /etc/letsencrypt/renewal-hooks/post/start-nginx.sh > /dev/null &&
-            sudo chmod +x /etc/letsencrypt/renewal-hooks/pre/stop-nginx.sh &&
-            sudo chmod +x /etc/letsencrypt/renewal-hooks/post/start-nginx.sh &&
-            sudo systemctl enable certbot.timer &&
-            sudo systemctl start certbot.timer &&
-            
-            echo '✅ SSL certificates installed successfully'
-            echo '📅 Auto-renewal enabled: certbot will check twice daily and renew 30 days before expiry'
-            echo '♻️ Renewal hooks configured: nginx will stop/start automatically during renewal'
-            echo '🔍 Certificate details:'
-            sudo certbot certificates
-          else
-            echo '✅ SSL certificates already exist'
-            sudo certbot certificates
+          rollback_name="agamvani-ui-rollback-${COMMIT_SHA}"
+          had_previous=false
+          if docker container inspect agamvani-ui >/dev/null 2>&1; then
+            docker stop agamvani-ui >/dev/null
+            docker rename agamvani-ui "$rollback_name"
+            had_previous=true
           fi
-        "
-    
-    - name: Deploy nginx configurations to server
-      run: |
-        echo "🔧 Deploying optimized nginx configurations to server..."
-        
-        # Upload site-specific configuration
-        scp nginx-configs/agamvani-domain ${{ secrets.SERVER_USER }}@${{ secrets.TAILSCALE_SERVER_IP }}:/tmp/agamvani-platform-nginx
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.TAILSCALE_SERVER_IP }} "
-          sudo mv /tmp/agamvani-platform-nginx ${{ env.NGINX_SITES_AVAILABLE }}/${{ env.SITE_NAME }}
-        "
-        
-        # Upload main nginx.conf if it doesn't exist or is different
-        echo "Uploading optimized main nginx configuration..."
-        scp nginx-configs/nginx.conf ${{ secrets.SERVER_USER }}@${{ secrets.TAILSCALE_SERVER_IP }}:/tmp/nginx-main.conf
-        
-        # Install main nginx.conf
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.TAILSCALE_SERVER_IP }} "
-          echo 'Installing optimized nginx.conf...' &&
-          sudo mv /tmp/nginx-main.conf /etc/nginx/nginx.conf &&
-          
-          echo '✅ Nginx configurations updated successfully'
-        "
 
-    - name: Enable nginx site configuration
-      run: |
-        echo "🔗 Enabling nginx site configuration..."
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.TAILSCALE_SERVER_IP }} "
-          echo '🔗 Creating symbolic link to enable site...' &&
-          sudo ln -sf ${{ env.NGINX_SITES_AVAILABLE }}/${{ env.SITE_NAME }} /etc/nginx/sites-enabled/${{ env.SITE_NAME }} &&
-          echo '✅ Site configuration enabled successfully'
-        "
+          rollback() {
+            docker rm -f agamvani-ui >/dev/null 2>&1 || true
+            if [ "$had_previous" = true ]; then
+              docker rename "$rollback_name" agamvani-ui
+              docker start agamvani-ui >/dev/null
+            fi
+            if [ -f "$site_backup" ]; then
+              install -m 0644 "$site_backup" "$site"
+              nginx -t && systemctl reload nginx
+            fi
+          }
+          trap rollback ERR
 
-    - name: Test and reload nginx
-      run: |
-        echo "♻️ Testing and reloading nginx..."
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.TAILSCALE_SERVER_IP }} "
-          echo '🔧 Testing nginx configuration...' &&
-          sudo nginx -t &&
-          
-          echo '🚀 Starting nginx...' &&
-          sudo systemctl start nginx &&
-          
-          echo '♻️ Reloading nginx to apply latest config...' &&
-          sudo systemctl reload nginx &&
-          
-          echo '🔍 Checking nginx status...' &&
-          sudo systemctl status nginx --no-pager &&
-          
-          echo '🌐 Testing nginx proxy to container...' &&
-          HTTP_CODE=\$(curl -s -o /dev/null -w '%{http_code}' http://localhost/health || echo '000') &&
-          if [ \"\$HTTP_CODE\" = \"200\" ]; then
-            echo '✅ Nginx proxy responding (HTTP \$HTTP_CODE)'
-          else
-            echo '⚠️  Nginx proxy test returned HTTP \$HTTP_CODE, but container is healthy - this is OK!'
-            echo '🔍 Note: External connectivity may take a moment to propagate'
-          fi &&
-          echo '✅ Health checks completed - deployment can proceed'
-        "
+          docker run -d \
+            --name agamvani-ui \
+            --restart unless-stopped \
+            --read-only \
+            --security-opt no-new-privileges:true \
+            --cap-drop ALL \
+            --tmpfs /tmp:rw,noexec,nosuid,size=32m \
+            --tmpfs /var/cache/nginx:rw,noexec,nosuid,size=32m \
+            --network agamvani-network \
+            -p "127.0.0.1:${HOST_PORT}:8080" \
+            "agamvani-ui:${COMMIT_SHA}" >/dev/null
 
-    - name: Verify containerized deployment
-      run: |
-        echo "🔍 Verifying containerized deployment..."
-        sleep 5
-        
-        # Check if site is responding
-        echo "🔍 Testing main page..."
-        RESPONSE_HEADERS=$(curl -s -I -H "Cache-Control: no-cache" ${{ secrets.VITE_FRONTEND_URL }})
-        HTTP_CODE=$(echo "$RESPONSE_HEADERS" | grep "HTTP/" | head -1 | grep -o '[0-9]\{3\}')
-        
-        if [ "$HTTP_CODE" = "200" ]; then
-          echo "✅ Site is responding successfully (HTTP $HTTP_CODE)"
-        else
-          echo "❌ Site is not responding correctly (HTTP $HTTP_CODE)"
-          exit 1
-        fi
-        
-        # Test container health endpoint
-        echo "🔍 Testing container health endpoint..."
-        HEALTH_CODE=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.VITE_FRONTEND_URL }}/health)
-        if [ $HEALTH_CODE -eq 200 ]; then
-          echo "✅ Container health endpoint accessible (HTTP $HEALTH_CODE)"
-        else
-          echo "❌ Container health endpoint failed (HTTP $HEALTH_CODE)"
-          exit 1
-        fi
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent "http://127.0.0.1:${HOST_PORT}/health" >/dev/null; then
+              nginx -t
+              systemctl reload nginx
+              ln -sfn "${DEPLOY_ROOT}/releases/${COMMIT_SHA}" "${DEPLOY_ROOT}/current"
+              trap - ERR
+              exit 0
+            fi
+            sleep 3
+          done
+          docker logs --tail=100 agamvani-ui
+          false
+          REMOTE
 
-    - name: Cleanup temporary files
-      run: |
-        echo "🧹 Cleaning up temporary files..."
-        rm -f agamvani-ui-image.tar
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.TAILSCALE_SERVER_IP }} "rm -f /tmp/agamvani-ui-image.tar"
-
-    - name: Docker system cleanup
-      run: |
-        echo "🧹 Running Docker system cleanup on server..."
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.TAILSCALE_SERVER_IP }} "
-          echo '🐳 Running docker system prune to clean up unused data...' &&
-          docker system prune -f || echo 'System prune completed' &&
-          echo '📊 Docker space usage after cleanup:' &&
-          docker system df --format 'table {{.Type}} {{.TotalCount}} {{.Size}} {{.Reclaimable}}' &&
-          echo '✅ Docker cleanup completed'
-        "
-
-    - name: Tailscale cleanup
-      if: always()
-      run: |
-        echo "✅ Tailscale session completed - ephemeral node will be auto-removed"
-
-    - name: Deployment summary
-      run: |
-        echo "🎉 Containerized frontend deployment completed successfully!"
-        echo "📝 Deployment Summary:"
-        echo "   • Repository: ${{ github.repository }}"
-        echo "   • Branch: ${{ github.ref_name }}"
-        echo "   • Commit: ${{ github.sha }}"
-        echo "   • Container: ${{ env.CONTAINER_NAME }}"
-        echo "   • Image: ${{ env.IMAGE_NAME }}"
-        echo "   • Frontend URL: ${{ secrets.VITE_FRONTEND_URL }}"
-        echo "   • Container Port: ${{ env.CONTAINER_PORT }}"
-        echo "   • Nginx Config: ${{ env.NGINX_CONFIG_TYPE }}"
-        echo "   • Deployed at: $(date)"
-        echo ""
-        echo "🚀 Performance Optimizations:"
-        echo "   ✅ Gzip compression enabled (level 6)"
-        echo "   ✅ Static asset caching (1 year)"
-        echo "   ✅ Extended API timeouts (120s)"
-        echo "   ✅ Large buffer support for audio streaming"
-        echo "   ✅ Mobile OAuth deep linking support"
-        echo "   ✅ CORS headers for mobile apps"
-        echo ""
-        echo "🐳 Container Details:"
-        echo "   ✅ Nginx running inside container"
-        echo "   ✅ Server nginx proxying to container"
-        echo "   ✅ Health checks enabled"
-        echo "   ✅ Log volume mounted"
-        echo "   ✅ Automatic restart on failure"
+      - name: Remove only staged files
+        if: always()
+        run: |
+          rm -f ui-image.tar.gz agamvani-site.conf
+          ssh production "sudo -n rm -f /tmp/ui-image.tar.gz /tmp/agamvani-site.conf" || true

@@ -15,20 +15,6 @@ const apiClient = axios.create({
   },
 });
 
-// Request interceptor for adding auth token
-apiClient.interceptors.request.use(
-  (config) => {
-    // Cookies are automatically sent with withCredentials: true
-    // But for mobile native auth, we also check localStorage for tokens
-    const accessToken = localStorage.getItem('access_token');
-    if (accessToken) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
 // Response interceptor for handling errors
 apiClient.interceptors.response.use(
   (response) => response,
@@ -79,14 +65,6 @@ export const authAPI = {
     }
     const response = await apiClient.post('/auth/verify-otp', payload);
     
-    // Store tokens in localStorage for mobile/Android compatibility
-    if (response.data.access_token) {
-      localStorage.setItem('access_token', response.data.access_token);
-    }
-    if (response.data.refresh_token) {
-      localStorage.setItem('refresh_token', response.data.refresh_token);
-    }
-    
     return response.data;
   },
 
@@ -96,15 +74,6 @@ export const authAPI = {
       email: data.email,
       password: data.password,
     });
-    
-    // Store tokens in localStorage for mobile/Android compatibility
-    // (cookies may not work reliably in Capacitor WebView)
-    if (response.data.access_token) {
-      localStorage.setItem('access_token', response.data.access_token);
-    }
-    if (response.data.refresh_token) {
-      localStorage.setItem('refresh_token', response.data.refresh_token);
-    }
     
     return response.data;
   },
