@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 
-import { createReadStream, existsSync, statSync } from "node:fs";
+import {
+  createReadStream,
+  existsSync,
+  readFileSync,
+  statSync,
+} from "node:fs";
 import { resolve } from "node:path";
 import { google } from "googleapis";
 
@@ -72,8 +77,14 @@ function createAuth() {
     throw new Error(`Service-account file not found: ${resolvedKeyFile}`);
   }
 
-  return new google.auth.GoogleAuth({
-    keyFile: resolvedKeyFile,
+  const credentials = JSON.parse(readFileSync(resolvedKeyFile, "utf8"));
+  if (!credentials.client_email || !credentials.private_key) {
+    throw new Error("Service-account JSON is missing required credentials.");
+  }
+
+  return new google.auth.JWT({
+    email: credentials.client_email,
+    key: credentials.private_key,
     scopes: [scope],
   });
 }
@@ -125,9 +136,9 @@ async function uploadInternal(publisher, bundlePath) {
     await publisher.edits.tracks.update({
       packageName,
       editId,
-      track: "qa",
+      track: "internal",
       requestBody: {
-        track: "qa",
+        track: "internal",
         releases: [
           {
             name: `Internal ${uploadedVersionCode}`,
@@ -151,7 +162,7 @@ async function promoteProduction(publisher, versionCode, rollout) {
     const internalTrack = await publisher.edits.tracks.get({
       packageName,
       editId,
-      track: "qa",
+      track: "internal",
     });
     const isOnInternalTrack = (internalTrack.data.releases || []).some(
       (release) => (release.versionCodes || []).includes(String(versionCode)),
