@@ -45,4 +45,5 @@ Configure these repository or environment secrets:
 The workflow uses the existing Vite build secrets as well. Configure the
 `google-play-production` GitHub environment with required reviewers so a
 production promotion cannot start without approval. Run **Publish Android to
-Google Play** manually from the Actions page.
+Google Play** manually from the Actions page. Production runs also require
+`in.ramsabha.agamvani` in the `production_confirmation` input.
