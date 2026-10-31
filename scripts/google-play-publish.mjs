@@ -125,9 +125,9 @@ async function uploadInternal(publisher, bundlePath) {
     await publisher.edits.tracks.update({
       packageName,
       editId,
-      track: "internal",
+      track: "qa",
       requestBody: {
-        track: "internal",
+        track: "qa",
         releases: [
           {
             name: `Internal ${uploadedVersionCode}`,
@@ -151,7 +151,7 @@ async function promoteProduction(publisher, versionCode, rollout) {
     const internalTrack = await publisher.edits.tracks.get({
       packageName,
       editId,
-      track: "internal",
+      track: "qa",
     });
     const isOnInternalTrack = (internalTrack.data.releases || []).some(
       (release) => (release.versionCodes || []).includes(String(versionCode)),
