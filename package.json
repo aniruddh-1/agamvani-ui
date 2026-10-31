@@ -14,7 +14,9 @@
     "android:open": "npx cap open android",
     "android:run": "npm run android:build && npx cap run android",
     "android:release": "cd android && ./gradlew assembleRelease",
-    "android:bundle": "cd android && ./gradlew bundleRelease"
+    "android:bundle": "cd android && ./gradlew bundleRelease",
+    "play:upload:internal": "node scripts/google-play-publish.mjs upload internal",
+    "play:promote:production": "node scripts/google-play-publish.mjs promote production"
   },
   "dependencies": {
     "@capacitor/android": "^7.6.9",
@@ -48,6 +50,7 @@
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "googleapis": "^189.0.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.14",
     "tailwindcss-animate": "^1.0.7",

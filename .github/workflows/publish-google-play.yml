@@ -1,0 +1,150 @@
+name: Publish Android to Google Play
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Google Play operation
+        required: true
+        type: choice
+        options:
+          - upload-internal
+          - promote-production
+      version_code:
+        description: Existing internal version code (production only)
+        required: false
+        type: string
+      rollout_fraction:
+        description: Production rollout from 0 to 1 (use 1 for full rollout)
+        required: false
+        default: "0.1"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agamvani-google-play-${{ inputs.operation }}
+  cancel-in-progress: false
+
+jobs:
+  upload-internal:
+    if: inputs.operation == 'upload-internal'
+    runs-on: ubuntu-latest
+    environment: google-play-internal
+    env:
+      VITE_API_ROOT_URL: ${{ secrets.VITE_API_ROOT_URL }}
+      VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+      VITE_FRONTEND_URL: ${{ secrets.VITE_FRONTEND_URL }}
+      VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Install and build web app
+        run: |
+          set -euo pipefail
+          : "${VITE_API_BASE_URL:?VITE_API_BASE_URL is required}"
+          : "${VITE_FRONTEND_URL:?VITE_FRONTEND_URL is required}"
+          : "${VITE_GOOGLE_CLIENT_ID:?VITE_GOOGLE_CLIENT_ID is required}"
+          npm ci --no-fund --no-audit --legacy-peer-deps
+          npm run build
+          npx cap sync android
+
+      - name: Prepare protected credentials
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          set -euo pipefail
+          : "${ANDROID_KEYSTORE_BASE64:?ANDROID_KEYSTORE_BASE64 is required}"
+          : "${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON:?GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is required}"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+          printf '%s' "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/google-play.json"
+          chmod 0600 "$RUNNER_TEMP/release.jks" "$RUNNER_TEMP/google-play.json"
+
+      - name: Build signed app bundle
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        working-directory: android
+        run: |
+          set -euo pipefail
+          : "${ANDROID_KEYSTORE_PASSWORD:?ANDROID_KEYSTORE_PASSWORD is required}"
+          : "${ANDROID_KEY_ALIAS:?ANDROID_KEY_ALIAS is required}"
+          : "${ANDROID_KEY_PASSWORD:?ANDROID_KEY_PASSWORD is required}"
+          ./gradlew bundleRelease --no-daemon
+
+      - name: Upload to internal testing
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/google-play.json
+        run: npm run play:upload:internal -- android/app/build/outputs/bundle/release/app-release.aab
+
+  promote-production:
+    if: inputs.operation == 'promote-production'
+    runs-on: ubuntu-latest
+    environment: google-play-production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install publishing dependencies
+        run: npm ci --no-fund --no-audit --legacy-peer-deps
+
+      - name: Validate requested promotion
+        env:
+          VERSION_CODE: ${{ inputs.version_code }}
+          ROLLOUT_FRACTION: ${{ inputs.rollout_fraction }}
+        run: |
+          set -euo pipefail
+          [[ "$VERSION_CODE" =~ ^[1-9][0-9]*$ ]] || {
+            echo "version_code must be a positive integer" >&2
+            exit 1
+          }
+          node -e '
+            const value = Number(process.env.ROLLOUT_FRACTION);
+            if (!(value > 0 && value <= 1)) {
+              throw new Error("rollout_fraction must be greater than 0 and at most 1");
+            }
+          '
+
+      - name: Prepare Google Play credentials
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          set -euo pipefail
+          : "${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON:?GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is required}"
+          printf '%s' "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/google-play.json"
+          chmod 0600 "$RUNNER_TEMP/google-play.json"
+
+      - name: Promote tested version
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/google-play.json
+          VERSION_CODE: ${{ inputs.version_code }}
+          ROLLOUT_FRACTION: ${{ inputs.rollout_fraction }}
+        run: |
+          npm run play:promote:production -- \
+            "$VERSION_CODE" \
+            --rollout "$ROLLOUT_FRACTION" \
+            --confirm-production
