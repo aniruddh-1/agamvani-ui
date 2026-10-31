@@ -15,15 +15,57 @@ const apiClient = axios.create({
   },
 });
 
-// Response interceptor for handling errors
+let refreshRequest = null;
+
+const refreshSession = () => {
+  if (!refreshRequest) {
+    // Use the base axios client so a failed refresh cannot recursively invoke
+    // this interceptor. A single promise also prevents one-time refresh-token
+    // rotation from racing when several requests fail together.
+    refreshRequest = axios.post(`${API_BASE_URL}/auth/refresh`, null, {
+      withCredentials: true,
+      timeout: 30000,
+    }).finally(() => {
+      refreshRequest = null;
+    });
+  }
+  return refreshRequest;
+};
+
+const isAuthenticationAttempt = (url = '') => [
+  '/auth/login',
+  '/auth/register',
+  '/auth/request-otp',
+  '/auth/verify-otp',
+  '/auth/google/native',
+  '/auth/refresh',
+  '/auth/logout',
+  '/auth/reset-password',
+].some((path) => url.includes(path));
+
+// Refresh an expired 15-minute access token with the 30-day HttpOnly session.
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Suppress 401 errors for /auth/me endpoint (expected when not logged in)
-      if (!error.config?.url?.includes('/auth/me')) {
-        console.error('Unauthorized access');
+  async (error) => {
+    const originalRequest = error.config;
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._sessionRefreshRetried &&
+      !isAuthenticationAttempt(originalRequest.url)
+    ) {
+      originalRequest._sessionRefreshRetried = true;
+      try {
+        await refreshSession();
+        return apiClient.request(originalRequest);
+      } catch {
+        // The refresh session is absent, expired, or revoked. Return the
+        // original 401 so AuthContext can transition to signed-out state.
       }
+    }
+
+    if (error.response?.status === 401 && !originalRequest?.url?.includes('/auth/me')) {
+      console.error('Unauthorized access');
     }
     return Promise.reject(error);
   }
