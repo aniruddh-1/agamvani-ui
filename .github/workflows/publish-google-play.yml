@@ -19,6 +19,10 @@ on:
         required: false
         default: "0.1"
         type: string
+      production_confirmation:
+        description: Type in.ramsabha.agamvani to confirm production
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -116,8 +120,13 @@ jobs:
         env:
           VERSION_CODE: ${{ inputs.version_code }}
           ROLLOUT_FRACTION: ${{ inputs.rollout_fraction }}
+          PRODUCTION_CONFIRMATION: ${{ inputs.production_confirmation }}
         run: |
           set -euo pipefail
+          [[ "$PRODUCTION_CONFIRMATION" == "in.ramsabha.agamvani" ]] || {
+            echo "production_confirmation must exactly match in.ramsabha.agamvani" >&2
+            exit 1
+          }
           [[ "$VERSION_CODE" =~ ^[1-9][0-9]*$ ]] || {
             echo "version_code must be a positive integer" >&2
             exit 1
